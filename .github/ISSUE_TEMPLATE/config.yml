@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/npequeux/rinux/tree/master/docs
+    about: Check the documentation for guides and reference
+  - name: Discussions
+    url: https://github.com/npequeux/rinux/discussions
+    about: Ask questions and discuss ideas with the community

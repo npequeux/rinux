@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-release:
+    name: Build Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src, llvm-tools-preview
+      
+      - name: Build kernel (release)
+        run: cargo +nightly build --release --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc
+      
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp target/x86_64-unknown-rinux/release/rinux release/
+          cp README.md LICENSE CHANGELOG.md release/
+          tar -czf rinux-${{ github.ref_name }}-x86_64.tar.gz -C release .
+      
+      - name: Generate checksums
+        run: |
+          sha256sum rinux-${{ github.ref_name }}-x86_64.tar.gz > checksums.txt
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            rinux-${{ github.ref_name }}-x86_64.tar.gz
+            checksums.txt
+          body: |
+            # Rinux ${{ github.ref_name }}
+            
+            ## Downloads
+            - `rinux-${{ github.ref_name }}-x86_64.tar.gz` - Kernel binary for x86_64
+            
+            ## Checksums
+            See `checksums.txt` for SHA256 hashes.
+            
+            ## Documentation
+            Full documentation available at: https://github.com/npequeux/rinux/tree/${{ github.ref_name }}/docs
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
