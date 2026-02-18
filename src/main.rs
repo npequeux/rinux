@@ -25,6 +25,9 @@ pub extern "C" fn _start() -> ! {
     // Initialize kernel subsystems
     rinux_kernel::init();
     
+    // Initialize device drivers
+    rinux_drivers::init();
+    
     rinux_kernel::printk::printk("Rinux kernel initialization complete!\n");
     
     // Enter main kernel loop
@@ -48,7 +51,7 @@ fn panic(info: &PanicInfo) -> ! {
         printk("\n");
     }
     
-    let message = info.message();
+    let _message = info.message();
     printk("Message: ");
     // TODO: Format message
     printk("\n");
