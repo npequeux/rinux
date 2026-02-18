@@ -35,7 +35,7 @@ jobs:
           sha256sum rinux-${{ github.ref_name }}-x86_64.tar.gz > checksums.txt
       
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             rinux-${{ github.ref_name }}-x86_64.tar.gz
