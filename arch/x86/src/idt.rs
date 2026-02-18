@@ -114,79 +114,95 @@ pub fn init() {
     }
 }
 
+// Exception handler type for handlers without error code
+type HandlerFunc = extern "x86-interrupt" fn(InterruptStackFrame);
+
+// Exception handler type for handlers with error code  
+type HandlerFuncWithErrCode = extern "x86-interrupt" fn(InterruptStackFrame, error_code: u64);
+
+/// Interrupt stack frame
+#[repr(C)]
+struct InterruptStackFrame {
+    instruction_pointer: u64,
+    code_segment: u64,
+    cpu_flags: u64,
+    stack_pointer: u64,
+    stack_segment: u64,
+}
+
 // Exception handlers
-extern "x86-interrupt" fn divide_by_zero_handler() {
+extern "x86-interrupt" fn divide_by_zero_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: Divide by zero");
 }
 
-extern "x86-interrupt" fn debug_handler() {
+extern "x86-interrupt" fn debug_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: Debug");
 }
 
-extern "x86-interrupt" fn nmi_handler() {
+extern "x86-interrupt" fn nmi_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: NMI");
 }
 
-extern "x86-interrupt" fn breakpoint_handler() {
+extern "x86-interrupt" fn breakpoint_handler(_stack_frame: InterruptStackFrame) {
     // Breakpoint - can be non-fatal
 }
 
-extern "x86-interrupt" fn overflow_handler() {
+extern "x86-interrupt" fn overflow_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: Overflow");
 }
 
-extern "x86-interrupt" fn bound_range_exceeded_handler() {
+extern "x86-interrupt" fn bound_range_exceeded_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: Bound range exceeded");
 }
 
-extern "x86-interrupt" fn invalid_opcode_handler() {
+extern "x86-interrupt" fn invalid_opcode_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: Invalid opcode");
 }
 
-extern "x86-interrupt" fn device_not_available_handler() {
+extern "x86-interrupt" fn device_not_available_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: Device not available");
 }
 
-extern "x86-interrupt" fn double_fault_handler() {
+extern "x86-interrupt" fn double_fault_handler(_stack_frame: InterruptStackFrame, _error_code: u64) -> ! {
     panic!("EXCEPTION: Double fault");
 }
 
-extern "x86-interrupt" fn invalid_tss_handler() {
+extern "x86-interrupt" fn invalid_tss_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
     panic!("EXCEPTION: Invalid TSS");
 }
 
-extern "x86-interrupt" fn segment_not_present_handler() {
+extern "x86-interrupt" fn segment_not_present_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
     panic!("EXCEPTION: Segment not present");
 }
 
-extern "x86-interrupt" fn stack_segment_fault_handler() {
+extern "x86-interrupt" fn stack_segment_fault_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
     panic!("EXCEPTION: Stack segment fault");
 }
 
-extern "x86-interrupt" fn general_protection_fault_handler() {
+extern "x86-interrupt" fn general_protection_fault_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
     panic!("EXCEPTION: General protection fault");
 }
 
-extern "x86-interrupt" fn page_fault_handler() {
+extern "x86-interrupt" fn page_fault_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
     panic!("EXCEPTION: Page fault");
 }
 
-extern "x86-interrupt" fn fpu_fault_handler() {
+extern "x86-interrupt" fn fpu_fault_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: FPU fault");
 }
 
-extern "x86-interrupt" fn alignment_check_handler() {
+extern "x86-interrupt" fn alignment_check_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
     panic!("EXCEPTION: Alignment check");
 }
 
-extern "x86-interrupt" fn machine_check_handler() {
+extern "x86-interrupt" fn machine_check_handler(_stack_frame: InterruptStackFrame) -> ! {
     panic!("EXCEPTION: Machine check");
 }
 
-extern "x86-interrupt" fn simd_exception_handler() {
+extern "x86-interrupt" fn simd_exception_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: SIMD exception");
 }
 
-extern "x86-interrupt" fn virtualization_exception_handler() {
+extern "x86-interrupt" fn virtualization_exception_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: Virtualization exception");
 }

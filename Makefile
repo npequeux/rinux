@@ -7,12 +7,12 @@ EXTRAVERSION =
 NAME = Rusty Start
 
 ARCH ?= x86_64
-TARGET = $(ARCH)-unknown-rinux
-KERNEL = target/$(TARGET)/release/rinux
+TARGET = $(ARCH)-unknown-rinux.json
+KERNEL = target/$(ARCH)-unknown-rinux/release/rinux
 
 # Build flags
-RUSTFLAGS = -C link-arg=-nostartfiles
-CARGOFLAGS = --target $(TARGET) -Z build-std=core,compiler_builtins,alloc
+RUSTFLAGS = 
+CARGOFLAGS = --target $(TARGET) -Z build-std=core,compiler_builtins,alloc -Z unstable-options -Z json-target-spec
 
 # QEMU settings
 QEMU = qemu-system-x86_64

@@ -3,8 +3,7 @@
 //! Architecture-specific code for x86_64.
 
 #![no_std]
-#![feature(asm_const)]
-#![feature(naked_functions)]
+#![feature(abi_x86_interrupt)]
 
 pub mod boot;
 pub mod cpu;

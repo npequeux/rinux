@@ -64,11 +64,15 @@ fn cpuid(leaf: u32) -> (u32, u32, u32, u32) {
     
     unsafe {
         asm!(
-            "cpuid",
+            "mov r11, rbx",      // Save rbx to r11
+            "cpuid",             // Execute cpuid
+            "mov {ebx:e}, ebx",  // Copy ebx result to output register
+            "mov rbx, r11",      // Restore rbx
+            ebx = out(reg) ebx,
             inout("eax") leaf => eax,
-            out("ebx") ebx,
             out("ecx") ecx,
             out("edx") edx,
+            out("r11") _,        // Mark r11 as clobbered
             options(nomem, nostack)
         );
     }
@@ -78,7 +82,7 @@ fn cpuid(leaf: u32) -> (u32, u32, u32, u32) {
 
 /// Get basic CPU information
 fn cpuid_basic() -> (CpuVendor, u32, u32, u32) {
-    let (eax, ebx, ecx, edx) = cpuid(0);
+    let (_eax, ebx, ecx, edx) = cpuid(0);
     
     // Determine vendor
     let vendor = if ebx == 0x756e6547 && edx == 0x49656e69 && ecx == 0x6c65746e {

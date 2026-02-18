@@ -4,13 +4,20 @@
 
 use spin::Mutex;
 
+/// VGA text buffer address
+const VGA_BUFFER: usize = 0xb8000;
+
+/// VGA text buffer wrapper
+struct VgaBuffer;
+
+impl VgaBuffer {
+    fn get() -> &'static mut Buffer {
+        unsafe { &mut *(VGA_BUFFER as *mut Buffer) }
+    }
+}
+
 /// VGA text buffer
-static WRITER: Mutex<Writer> = Mutex::new(Writer {
-    column_position: 0,
-    row_position: 0,
-    color_code: ColorCode::new(Color::White, Color::Black),
-    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-});
+static WRITER: Mutex<Option<Writer>> = Mutex::new(None);
 
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
@@ -134,12 +141,24 @@ impl Writer {
 
 /// Initialize printk subsystem
 pub fn init() {
-    WRITER.lock().clear_screen();
+    let mut writer = WRITER.lock();
+    if writer.is_none() {
+        *writer = Some(Writer {
+            column_position: 0,
+            row_position: 0,
+            color_code: ColorCode::new(Color::White, Color::Black),
+            buffer: VgaBuffer::get(),
+        });
+        writer.as_mut().unwrap().clear_screen();
+    }
 }
 
 /// Print a string to the console
 pub fn printk(s: &str) {
-    WRITER.lock().write_string(s);
+    let mut writer_opt = WRITER.lock();
+    if let Some(writer) = writer_opt.as_mut() {
+        writer.write_string(s);
+    }
 }
 
 /// Print kernel macro
@@ -155,7 +174,7 @@ macro_rules! printkln {
     ($($arg:tt)*) => ($crate::printk!("{}\n", format_args!($($arg)*)));
 }
 
-use core::fmt::{self, Write};
+use core::fmt;
 
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
@@ -167,5 +186,8 @@ impl fmt::Write for Writer {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    WRITER.lock().write_fmt(args).unwrap();
+    let mut writer_opt = WRITER.lock();
+    if let Some(writer) = writer_opt.as_mut() {
+        writer.write_fmt(args).unwrap();
+    }
 }

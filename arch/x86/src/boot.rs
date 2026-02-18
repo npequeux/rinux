@@ -2,12 +2,10 @@
 //!
 //! Early boot initialization for x86_64.
 
-use core::arch::asm;
-
 /// Multiboot header constants
 const MULTIBOOT_MAGIC: u32 = 0x1BADB002;
 const MULTIBOOT_FLAGS: u32 = 0x00000003;
-const MULTIBOOT_CHECKSUM: u32 = -(MULTIBOOT_MAGIC + MULTIBOOT_FLAGS) as u32;
+const MULTIBOOT_CHECKSUM: u32 = 0u32.wrapping_sub(MULTIBOOT_MAGIC).wrapping_sub(MULTIBOOT_FLAGS);
 
 /// Multiboot header
 #[repr(C, align(4))]

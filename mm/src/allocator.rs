@@ -35,9 +35,17 @@ impl BumpAllocator {
     }
 }
 
-unsafe impl GlobalAlloc for Mutex<BumpAllocator> {
+/// Align address upwards
+fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) & !(align - 1)
+}
+
+/// Wrapper around Mutex<BumpAllocator> for the global allocator
+struct LockedAllocator(Mutex<BumpAllocator>);
+
+unsafe impl GlobalAlloc for LockedAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let mut allocator = self.lock();
+        let mut allocator = self.0.lock();
         
         let alloc_start = align_up(allocator.next, layout.align());
         let alloc_end = alloc_start.saturating_add(layout.size());
@@ -55,13 +63,8 @@ unsafe impl GlobalAlloc for Mutex<BumpAllocator> {
     }
 }
 
-/// Align address upwards
-fn align_up(addr: usize, align: usize) -> usize {
-    (addr + align - 1) & !(align - 1)
-}
-
 #[global_allocator]
-static ALLOCATOR: Mutex<BumpAllocator> = Mutex::new(BumpAllocator::new());
+static ALLOCATOR: LockedAllocator = LockedAllocator(Mutex::new(BumpAllocator::new()));
 
 /// Initialize the heap
 pub fn init() {

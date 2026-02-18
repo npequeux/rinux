@@ -3,7 +3,6 @@
 //! Core kernel functionality and initialization.
 
 #![no_std]
-#![feature(panic_info_message)]
 
 pub mod printk;
 pub mod init;

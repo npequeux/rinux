@@ -4,9 +4,6 @@
 
 #![no_std]
 #![no_main]
-#![feature(asm_const)]
-#![feature(naked_functions)]
-#![feature(panic_info_message)]
 
 use core::panic::PanicInfo;
 
@@ -51,11 +48,10 @@ fn panic(info: &PanicInfo) -> ! {
         printk("\n");
     }
     
-    if let Some(message) = info.message() {
-        printk("Message: ");
-        // TODO: Format message
-        printk("\n");
-    }
+    let message = info.message();
+    printk("Message: ");
+    // TODO: Format message
+    printk("\n");
     
     loop {
         rinux_arch_x86::halt();

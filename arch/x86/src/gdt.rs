@@ -103,7 +103,6 @@ pub fn init() {
             "mov gs, ax",
             "mov ss, ax",
             out("rax") _,
-            out("ax") _,
             options(nostack)
         );
     }
