@@ -1,5 +1,10 @@
 # Rinux
 
+[![CI](https://github.com/npequeux/rinux/actions/workflows/ci.yml/badge.svg)](https://github.com/npequeux/rinux/actions/workflows/ci.yml)
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![Rust](https://img.shields.io/badge/rust-nightly-orange.svg)](https://www.rust-lang.org/)
+[![Platform](https://img.shields.io/badge/platform-x86__64-lightgrey.svg)](https://github.com/npequeux/rinux)
+
 Rinux is a modern operating system kernel written in Rust, inspired by Linux's architecture and design principles. The project aims to leverage Rust's safety guarantees to build a robust, secure, and performant kernel.
 
 ## Features
