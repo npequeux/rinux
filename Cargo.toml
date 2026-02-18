@@ -1,0 +1,44 @@
+[package]
+name = "rinux"
+version = "0.1.0"
+edition = "2021"
+authors = ["Rinux Contributors"]
+license = "GPL-2.0"
+description = "Rinux - A Rust-based operating system kernel"
+
+[workspace]
+members = [
+    ".",
+    "arch/x86",
+    "kernel",
+    "mm",
+    "drivers",
+    "lib",
+]
+
+[dependencies]
+rinux-arch-x86 = { path = "arch/x86" }
+rinux-kernel = { path = "kernel" }
+rinux-mm = { path = "mm" }
+rinux-drivers = { path = "drivers" }
+rinux-lib = { path = "lib" }
+spin = "0.9"
+bitflags = "2.4"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = true
+opt-level = 2
+
+[lib]
+crate-type = ["staticlib"]
+
+[[bin]]
+name = "rinux"
+path = "src/main.rs"
+
+[build-dependencies]
+cc = "1.0"

@@ -1,0 +1,14 @@
+[build]
+target = "x86_64-unknown-rinux"
+
+[target.x86_64-unknown-rinux]
+linker = "rust-lld"
+rustflags = [
+    "-C", "link-arg=-nostartfiles",
+    "-C", "relocation-model=static",
+    "-C", "code-model=kernel",
+]
+
+[unstable]
+build-std = ["core", "compiler_builtins", "alloc"]
+build-std-features = ["compiler-builtins-mem"]

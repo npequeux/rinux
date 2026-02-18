@@ -1,0 +1,38 @@
+# Rinux Configuration
+
+## Architecture
+ARCH=x86_64
+
+## Build type
+BUILD_TYPE=release
+
+## Kernel features
+CONFIG_SMP=y
+CONFIG_PREEMPT=n
+CONFIG_MODULES=y
+
+## Memory management
+CONFIG_HIGHMEM=y
+CONFIG_SWAP=y
+CONFIG_SLAB=y
+
+## File systems
+CONFIG_EXT4=y
+CONFIG_TMPFS=y
+CONFIG_PROC=y
+CONFIG_SYSFS=y
+
+## Networking
+CONFIG_NET=y
+CONFIG_INET=y
+CONFIG_TCP=y
+CONFIG_UDP=y
+
+## Device drivers
+CONFIG_SERIAL=y
+CONFIG_VGA=y
+CONFIG_KEYBOARD=y
+
+## Debugging
+CONFIG_DEBUG=n
+CONFIG_KGDB=n

@@ -1,0 +1,13 @@
+[package]
+name = "rinux-arch-x86"
+version = "0.1.0"
+edition = "2021"
+authors = ["Rinux Contributors"]
+license = "GPL-2.0"
+
+[dependencies]
+bitflags = "2.4"
+spin = "0.9"
+
+[lib]
+crate-type = ["rlib"]

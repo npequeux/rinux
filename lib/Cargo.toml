@@ -1,0 +1,11 @@
+[package]
+name = "rinux-lib"
+version = "0.1.0"
+edition = "2021"
+authors = ["Rinux Contributors"]
+license = "GPL-2.0"
+
+[dependencies]
+
+[lib]
+crate-type = ["rlib"]
