@@ -220,4 +220,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## License
 
-GPL-2.0, similar to Linux.
+MIT License.
