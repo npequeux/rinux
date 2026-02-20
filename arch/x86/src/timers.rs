@@ -2,7 +2,6 @@
 //!
 //! Support for TSC (Time Stamp Counter) and HPET (High Precision Event Timer).
 
-use crate::long_mode::rdmsr;
 use core::arch::asm;
 use core::ptr::{read_volatile, write_volatile};
 
@@ -148,15 +147,15 @@ fn calibrate_tsc_pit() -> u64 {
 /// Initialize TSC
 pub fn init_tsc() {
     if !has_tsc() {
-        kernel::printk!("[TSC] Time Stamp Counter not available\n");
+        rinux_kernel::printk!("[TSC] Time Stamp Counter not available\n");
         return;
     }
 
-    kernel::printk!("[TSC] Initializing Time Stamp Counter...\n");
+    rinux_kernel::printk!("[TSC] Initializing Time Stamp Counter...\n");
 
     // Try to get frequency from CPUID
     let freq = get_tsc_frequency_cpuid().unwrap_or_else(|| {
-        kernel::printk!("[TSC] Calibrating using PIT...\n");
+        rinux_kernel::printk!("[TSC] Calibrating using PIT...\n");
         calibrate_tsc_pit()
     });
 
@@ -164,9 +163,9 @@ pub fn init_tsc() {
         TSC_FREQUENCY = freq;
     }
 
-    kernel::printk!("[TSC] Frequency: {} Hz ({} MHz)\n", freq, freq / 1_000_000);
-    kernel::printk!("[TSC] Invariant: {}\n", has_invariant_tsc());
-    kernel::printk!("[TSC] RDTSCP: {}\n", has_rdtscp());
+    rinux_kernel::printk!("[TSC] Frequency: {} Hz ({} MHz)\n", freq, freq / 1_000_000);
+    rinux_kernel::printk!("[TSC] Invariant: {}\n", has_invariant_tsc());
+    rinux_kernel::printk!("[TSC] RDTSCP: {}\n", has_rdtscp());
 }
 
 /// Get TSC frequency
@@ -246,7 +245,7 @@ pub fn read_hpet_counter() -> u64 {
 
 /// Initialize HPET
 pub fn init_hpet() {
-    kernel::printk!("[HPET] Searching for High Precision Event Timer...\n");
+    rinux_kernel::printk!("[HPET] Searching for High Precision Event Timer...\n");
 
     if let Some(base) = find_hpet_base() {
         unsafe {
@@ -258,11 +257,11 @@ pub fn init_hpet() {
             let num_timers = ((caps >> 8) & 0x1F) + 1;
             let period = caps >> 32;
 
-            kernel::printk!("[HPET] Found at {:#x}\n", base);
-            kernel::printk!("[HPET] Vendor ID: {:#x}\n", vendor_id);
-            kernel::printk!("[HPET] Timers: {}\n", num_timers);
-            kernel::printk!("[HPET] Period: {} fs\n", period);
-            kernel::printk!(
+            rinux_kernel::printk!("[HPET] Found at {:#x}\n", base);
+            rinux_kernel::printk!("[HPET] Vendor ID: {:#x}\n", vendor_id);
+            rinux_kernel::printk!("[HPET] Timers: {}\n", num_timers);
+            rinux_kernel::printk!("[HPET] Period: {} fs\n", period);
+            rinux_kernel::printk!(
                 "[HPET] Frequency: {} Hz\n",
                 1_000_000_000_000_000u64 / period
             );
@@ -271,19 +270,19 @@ pub fn init_hpet() {
             let config = read_hpet(hpet_reg::GENERAL_CONFIG);
             write_hpet(hpet_reg::GENERAL_CONFIG, config | 1);
 
-            kernel::printk!("[HPET] Enabled\n");
+            rinux_kernel::printk!("[HPET] Enabled\n");
         }
     } else {
-        kernel::printk!("[HPET] Not found\n");
+        rinux_kernel::printk!("[HPET] Not found\n");
     }
 }
 
 /// Initialize all timers
 pub fn init() {
-    kernel::printk!("[TIMERS] Initializing high-precision timers...\n");
+    rinux_kernel::printk!("[TIMERS] Initializing high-precision timers...\n");
     init_tsc();
     init_hpet();
-    kernel::printk!("[TIMERS] Initialization complete\n");
+    rinux_kernel::printk!("[TIMERS] Initialization complete\n");
 }
 
 /// Busy wait for a number of nanoseconds using TSC

@@ -8,6 +8,7 @@ license = "MIT"
 [dependencies]
 bitflags = "2.4"
 spin = "0.9"
+rinux-kernel = { path = "../../kernel" }
 
 [lib]
 crate-type = ["rlib"]

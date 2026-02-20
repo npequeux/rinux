@@ -172,11 +172,11 @@ pub fn enable_long_mode() {
 /// Initialize long mode support
 pub fn init() {
     if is_long_mode_enabled() {
-        kernel::printk!("[LONG_MODE] Already in long mode\n");
+        rinux_kernel::printk!("[LONG_MODE] Already in long mode\n");
     } else {
-        kernel::printk!("[LONG_MODE] Enabling long mode...\n");
+        rinux_kernel::printk!("[LONG_MODE] Enabling long mode...\n");
         enable_long_mode();
-        kernel::printk!("[LONG_MODE] Long mode enabled\n");
+        rinux_kernel::printk!("[LONG_MODE] Long mode enabled\n");
     }
 
     // Enable additional CPU features
@@ -184,7 +184,7 @@ pub fn init() {
     cr4 |= cr4::OSFXSR | cr4::OSXMMEXCPT; // Enable FXSAVE/FXRSTOR and XMM exceptions
     write_cr4(cr4);
 
-    kernel::printk!("[LONG_MODE] CPU features enabled\n");
+    rinux_kernel::printk!("[LONG_MODE] CPU features enabled\n");
 }
 
 /// Get current protection level

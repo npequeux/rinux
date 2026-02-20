@@ -170,7 +170,7 @@ pub fn init_xapic() -> bool {
     let spurious = read_register(reg::SPURIOUS);
     write_register(reg::SPURIOUS, spurious | 0x100); // Enable bit
 
-    kernel::printk!("[APIC] Initialized in xAPIC mode at {:#x}\n", base);
+    rinux_kernel::printk!("[APIC] Initialized in xAPIC mode at {:#x}\n", base);
     true
 }
 
@@ -192,7 +192,7 @@ pub fn init_x2apic() -> bool {
     let spurious = rdmsr(x2apic_msr::SPURIOUS) as u32;
     wrmsr(x2apic_msr::SPURIOUS, (spurious | 0x100) as u64);
 
-    kernel::printk!("[APIC] Initialized in x2APIC mode\n");
+    rinux_kernel::printk!("[APIC] Initialized in x2APIC mode\n");
     true
 }
 
@@ -206,7 +206,7 @@ pub fn init() {
         return;
     }
 
-    kernel::printk!("[APIC] No APIC support available, using legacy PIC\n");
+    rinux_kernel::printk!("[APIC] No APIC support available, using legacy PIC\n");
 }
 
 /// Send End of Interrupt signal

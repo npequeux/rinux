@@ -29,7 +29,7 @@ impl CpuInfo {
 }
 
 /// Global CPU information array
-static mut CPUS: [CpuInfo; MAX_CPUS] = [CpuInfo::new(); MAX_CPUS];
+static mut CPUS: [CpuInfo; MAX_CPUS] = [const { CpuInfo::new() }; MAX_CPUS];
 
 /// Number of detected CPUs
 static CPU_COUNT: AtomicU32 = AtomicU32::new(0);
@@ -61,7 +61,7 @@ pub fn is_bsp() -> bool {
 fn register_cpu(apic_id: u32) -> Option<u32> {
     let count = CPU_COUNT.fetch_add(1, Ordering::AcqRel);
     if count >= MAX_CPUS as u32 {
-        kernel::printk!("[SMP] Too many CPUs (max {})\n", MAX_CPUS);
+        rinux_kernel::printk!("[SMP] Too many CPUs (max {})\n", MAX_CPUS);
         return None;
     }
 
@@ -99,7 +99,7 @@ pub fn is_cpu_online(cpu_id: u32) -> bool {
 fn detect_cpus_acpi() -> u32 {
     // TODO: Parse ACPI MADT (Multiple APIC Description Table)
     // For now, just return 1 (BSP only)
-    kernel::printk!("[SMP] ACPI MADT parsing not yet implemented\n");
+    rinux_kernel::printk!("[SMP] ACPI MADT parsing not yet implemented\n");
     1
 }
 
@@ -113,7 +113,7 @@ fn detect_cpus_cpuid() -> u32 {
     if (edx & (1 << 28)) != 0 {
         // HTT is supported, get logical processor count
         let logical_count = (ebx >> 16) & 0xFF;
-        kernel::printk!("[SMP] CPUID reports {} logical processors\n", logical_count);
+        rinux_kernel::printk!("[SMP] CPUID reports {} logical processors\n", logical_count);
         logical_count
     } else {
         1
@@ -160,7 +160,7 @@ extern "C" fn ap_entry() -> ! {
 
     // Get our APIC ID
     let apic_id = apic::get_id();
-    kernel::printk!("[SMP] AP {} started\n", apic_id);
+    rinux_kernel::printk!("[SMP] AP {} started\n", apic_id);
 
     // Mark ourselves as online
     // (Find our CPU ID from APIC ID)
@@ -185,7 +185,7 @@ fn start_ap(cpu_id: u32) -> bool {
     unsafe {
         let apic_id = CPUS[cpu_id as usize].apic_id;
 
-        kernel::printk!("[SMP] Starting AP {} (APIC ID: {})\n", cpu_id, apic_id);
+        rinux_kernel::printk!("[SMP] Starting AP {} (APIC ID: {})\n", cpu_id, apic_id);
 
         // TODO: Setup trampoline code in low memory
         // For now, we can't actually start APs without proper setup
@@ -205,20 +205,20 @@ fn start_ap(cpu_id: u32) -> bool {
         // Wait for AP to start
         for _ in 0..100 {
             if CPUS[cpu_id as usize].started.load(Ordering::Acquire) {
-                kernel::printk!("[SMP] AP {} started successfully\n", cpu_id);
+                rinux_kernel::printk!("[SMP] AP {} started successfully\n", cpu_id);
                 return true;
             }
             crate::timers::delay_ms(10);
         }
 
-        kernel::printk!("[SMP] AP {} failed to start\n", cpu_id);
+        rinux_kernel::printk!("[SMP] AP {} failed to start\n", cpu_id);
         false
     }
 }
 
 /// Initialize SMP support
 pub fn init() {
-    kernel::printk!("[SMP] Initializing multi-core support...\n");
+    rinux_kernel::printk!("[SMP] Initializing multi-core support...\n");
 
     // Get BSP APIC ID
     let bsp_apic_id = apic::get_id();
@@ -227,7 +227,7 @@ pub fn init() {
     // Register BSP
     if let Some(cpu_id) = register_cpu(bsp_apic_id) {
         set_cpu_online(cpu_id, true);
-        kernel::printk!(
+        rinux_kernel::printk!(
             "[SMP] BSP registered as CPU {} (APIC ID: {})\n",
             cpu_id,
             bsp_apic_id
@@ -236,21 +236,21 @@ pub fn init() {
 
     // Detect additional CPUs
     let detected = detect_cpus_cpuid();
-    kernel::printk!("[SMP] Detected {} CPU(s)\n", detected);
+    rinux_kernel::printk!("[SMP] Detected {} CPU(s)\n", detected);
 
     // Try ACPI detection for more accurate info
     let acpi_count = detect_cpus_acpi();
 
     if detected > 1 {
-        kernel::printk!("[SMP] Multi-core detected, but AP startup not yet implemented\n");
-        kernel::printk!("[SMP] Trampoline code and memory setup required\n");
+        rinux_kernel::printk!("[SMP] Multi-core detected, but AP startup not yet implemented\n");
+        rinux_kernel::printk!("[SMP] Trampoline code and memory setup required\n");
         // TODO: Start APs
         // for cpu_id in 1..detected {
         //     start_ap(cpu_id);
         // }
     }
 
-    kernel::printk!("[SMP] Online CPUs: {}\n", cpu_count());
+    rinux_kernel::printk!("[SMP] Online CPUs: {}\n", cpu_count());
 }
 
 // Helper function to read APIC register (needed for IPI functions)
