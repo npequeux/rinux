@@ -397,3 +397,54 @@ pub fn is_clear_to_send(port: ComPort) -> bool {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_baud_rate_divisors() {
+        assert_eq!(BaudRate::Baud115200 as u16, 1);
+        assert_eq!(BaudRate::Baud57600 as u16, 2);
+        assert_eq!(BaudRate::Baud38400 as u16, 3);
+        assert_eq!(BaudRate::Baud19200 as u16, 6);
+        assert_eq!(BaudRate::Baud9600 as u16, 12);
+    }
+
+    #[test]
+    fn test_com_port_variants() {
+        // Test that each COM port returns a different static reference
+        let com1 = ComPort::COM1.get_port() as *const _;
+        let com2 = ComPort::COM2.get_port() as *const _;
+        let com3 = ComPort::COM3.get_port() as *const _;
+        let com4 = ComPort::COM4.get_port() as *const _;
+
+        assert_ne!(com1, com2);
+        assert_ne!(com1, com3);
+        assert_ne!(com1, com4);
+        assert_ne!(com2, com3);
+    }
+
+    #[test]
+    fn test_data_bits_values() {
+        assert_eq!(DataBits::Bits5 as u8, 0x00);
+        assert_eq!(DataBits::Bits6 as u8, 0x01);
+        assert_eq!(DataBits::Bits7 as u8, 0x02);
+        assert_eq!(DataBits::Bits8 as u8, 0x03);
+    }
+
+    #[test]
+    fn test_stop_bits_values() {
+        assert_eq!(StopBits::One as u8, 0x00);
+        assert_eq!(StopBits::Two as u8, 0x04);
+    }
+
+    #[test]
+    fn test_parity_values() {
+        assert_eq!(Parity::None as u8, 0x00);
+        assert_eq!(Parity::Odd as u8, 0x08);
+        assert_eq!(Parity::Even as u8, 0x18);
+        assert_eq!(Parity::Mark as u8, 0x28);
+        assert_eq!(Parity::Space as u8, 0x38);
+    }
+}

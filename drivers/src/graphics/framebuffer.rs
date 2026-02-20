@@ -315,6 +315,52 @@ fn get_char_bitmap(ch: u8) -> &'static [u8; 8] {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pixel_format_variants() {
+        assert_ne!(PixelFormat::RGB888, PixelFormat::RGBX8888);
+        assert_ne!(PixelFormat::BGR888, PixelFormat::BGRX8888);
+    }
+
+    #[test]
+    fn test_framebuffer_info_creation() {
+        let info = FramebufferInfo {
+            addr: 0xB8000,
+            width: 1920,
+            height: 1080,
+            pitch: 1920 * 4,
+            bpp: 32,
+            format: PixelFormat::RGBX8888,
+        };
+        assert_eq!(info.width, 1920);
+        assert_eq!(info.height, 1080);
+        assert_eq!(info.bpp, 32);
+    }
+
+    #[test]
+    fn test_char_bitmap_exists() {
+        // Test that some characters have valid bitmaps
+        let bitmap_a = get_char_bitmap(b'A');
+        assert_eq!(bitmap_a.len(), 8);
+
+        let bitmap_space = get_char_bitmap(b' ');
+        assert_eq!(
+            bitmap_space,
+            &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+        );
+
+        // Unknown char should return box
+        let bitmap_unknown = get_char_bitmap(b'~');
+        assert_eq!(
+            bitmap_unknown,
+            &[0x7E, 0x42, 0x42, 0x42, 0x42, 0x42, 0x7E, 0x00]
+        );
+    }
+}
+
 unsafe impl Send for Framebuffer {}
 unsafe impl Sync for Framebuffer {}
 
@@ -361,8 +407,8 @@ pub fn test() {
     }
 }
 
-/// Test drawing primitives
-pub fn test_primitives() {
+/// Demo drawing primitives (example/demonstration function)
+pub fn demo_primitives() {
     let mut fb_lock = FRAMEBUFFER.lock();
     if let Some(ref mut fb) = *fb_lock {
         // Clear to dark blue
@@ -400,8 +446,8 @@ pub fn test_primitives() {
 
         // Draw some text
         if width >= 200 && height >= 100 {
-            fb.draw_string(10, 10, "Rinux Graphics Test", 0xFFFFFF);
-            fb.draw_string(10, 20, "Primitives Demo", 0xFFFF00);
+            fb.draw_string(10, 10, "Rinux Graphics Demo", 0xFFFFFF);
+            fb.draw_string(10, 20, "Primitives Example", 0xFFFF00);
         }
     }
 }

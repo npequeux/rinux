@@ -416,3 +416,80 @@ fn scancode_to_ascii(scancode: u8, shift: bool, caps: bool) -> Option<u8> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_keyboard_state_new() {
+        let state = KeyboardState::new();
+        assert!(!state.shift_pressed);
+        assert!(!state.ctrl_pressed);
+        assert!(!state.alt_pressed);
+        assert!(!state.caps_lock);
+        assert!(!state.num_lock);
+        assert!(!state.scroll_lock);
+    }
+
+    #[test]
+    fn test_keyboard_state_toggles() {
+        let mut state = KeyboardState::new();
+
+        state.toggle_caps_lock();
+        assert!(state.caps_lock);
+        state.toggle_caps_lock();
+        assert!(!state.caps_lock);
+
+        state.toggle_num_lock();
+        assert!(state.num_lock);
+
+        state.toggle_scroll_lock();
+        assert!(state.scroll_lock);
+    }
+
+    #[test]
+    fn test_scancode_to_ascii_numbers() {
+        // Test number keys without shift
+        assert_eq!(scancode_to_ascii(0x02, false, false), Some(b'1'));
+        assert_eq!(scancode_to_ascii(0x03, false, false), Some(b'2'));
+        assert_eq!(scancode_to_ascii(0x0B, false, false), Some(b'0'));
+
+        // Test number keys with shift
+        assert_eq!(scancode_to_ascii(0x02, true, false), Some(b'!'));
+        assert_eq!(scancode_to_ascii(0x03, true, false), Some(b'@'));
+        assert_eq!(scancode_to_ascii(0x0B, true, false), Some(b')'));
+    }
+
+    #[test]
+    fn test_scancode_to_ascii_letters() {
+        // Test lowercase letters
+        assert_eq!(scancode_to_ascii(0x1E, false, false), Some(b'a'));
+        assert_eq!(scancode_to_ascii(0x30, false, false), Some(b'b'));
+        assert_eq!(scancode_to_ascii(0x2C, false, false), Some(b'z'));
+
+        // Test uppercase with shift
+        assert_eq!(scancode_to_ascii(0x1E, true, false), Some(b'A'));
+        assert_eq!(scancode_to_ascii(0x30, true, false), Some(b'B'));
+
+        // Test uppercase with caps lock
+        assert_eq!(scancode_to_ascii(0x1E, false, true), Some(b'A'));
+
+        // Test shift+caps (should be lowercase)
+        assert_eq!(scancode_to_ascii(0x1E, true, true), Some(b'a'));
+    }
+
+    #[test]
+    fn test_scancode_to_ascii_special() {
+        assert_eq!(scancode_to_ascii(0x39, false, false), Some(b' ')); // Space
+        assert_eq!(scancode_to_ascii(0x1C, false, false), Some(b'\n')); // Enter
+        assert_eq!(scancode_to_ascii(0x0E, false, false), Some(b'\x08')); // Backspace
+        assert_eq!(scancode_to_ascii(0x0F, false, false), Some(b'\t')); // Tab
+    }
+
+    #[test]
+    fn test_scancode_to_ascii_invalid() {
+        // Test invalid scancode
+        assert_eq!(scancode_to_ascii(0xFF, false, false), None);
+    }
+}
