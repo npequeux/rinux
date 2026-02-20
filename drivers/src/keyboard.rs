@@ -15,6 +15,9 @@ const COMMAND_PORT: u16 = 0x64;
 const STATUS_OUTPUT_FULL: u8 = 0x01;
 const STATUS_INPUT_FULL: u8 = 0x02;
 
+/// Timeout iterations for waiting operations
+const TIMEOUT_ITERATIONS: u32 = 1000;
+
 /// Global keyboard state
 static KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard { initialized: false });
 
@@ -75,7 +78,7 @@ impl Keyboard {
     ///
     /// Performs I/O port read.
     unsafe fn wait_input_empty(&self) {
-        for _ in 0..1000 {
+        for _ in 0..TIMEOUT_ITERATIONS {
             if inb(STATUS_PORT) & STATUS_INPUT_FULL == 0 {
                 return;
             }
@@ -89,7 +92,7 @@ impl Keyboard {
     ///
     /// Performs I/O port read.
     unsafe fn wait_output_full(&self) {
-        for _ in 0..1000 {
+        for _ in 0..TIMEOUT_ITERATIONS {
             if inb(STATUS_PORT) & STATUS_OUTPUT_FULL != 0 {
                 return;
             }

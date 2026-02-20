@@ -33,6 +33,8 @@ impl Timer {
     /// Performs I/O port operations.
     unsafe fn init(&mut self, frequency: u32) {
         if frequency == 0 || frequency > PIT_FREQUENCY {
+            rinux_kernel::printk::printk("  [ERROR] Invalid PIT frequency: ");
+            rinux_kernel::printk::printk("must be between 1 and 1193182 Hz\n");
             return;
         }
 

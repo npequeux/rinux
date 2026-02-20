@@ -67,6 +67,7 @@ impl FrameAllocator {
 
         // Limit to MAX_FRAMES
         if self.total_frames > MAX_FRAMES as u64 {
+            // TODO: Log warning about truncation (needs kernel dependency)
             self.total_frames = MAX_FRAMES as u64;
         }
 
