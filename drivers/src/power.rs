@@ -27,11 +27,11 @@ pub enum PowerSource {
 pub struct BatteryInfo {
     pub state: BatteryState,
     pub percentage: u8,
-    pub remaining_capacity: u32,  // mWh
-    pub full_capacity: u32,       // mWh
-    pub voltage: u32,             // mV
-    pub current: i32,             // mA (negative when discharging)
-    pub temperature: i16,         // 0.1 Kelvin
+    pub remaining_capacity: u32, // mWh
+    pub full_capacity: u32,      // mWh
+    pub voltage: u32,            // mV
+    pub current: i32,            // mA (negative when discharging)
+    pub temperature: i16,        // 0.1 Kelvin
 }
 
 impl BatteryInfo {
@@ -111,9 +111,9 @@ impl PowerManager {
         self.battery_info.state = BatteryState::Discharging;
         self.battery_info.percentage = 85;
         self.battery_info.remaining_capacity = 45000; // 45 Wh
-        self.battery_info.full_capacity = 53000;      // 53 Wh
-        self.battery_info.voltage = 11400;            // 11.4V
-        self.battery_info.current = -5000;            // -5A (discharging)
+        self.battery_info.full_capacity = 53000; // 53 Wh
+        self.battery_info.voltage = 11400; // 11.4V
+        self.battery_info.current = -5000; // -5A (discharging)
     }
 
     /// Get battery info

@@ -127,7 +127,7 @@ unsafe fn find_rsdp() -> Option<u64> {
     // Check EBDA (first 1KB)
     let ebda_ptr = *(0x40E as *const u16) as u64;
     let ebda_start = (ebda_ptr << 4) as usize;
-    
+
     if ebda_start != 0 {
         if let Some(addr) = search_rsdp(ebda_start, 1024) {
             return Some(addr);
@@ -145,7 +145,7 @@ unsafe fn search_rsdp(start: usize, length: usize) -> Option<u64> {
 
     while addr < end - 16 {
         let ptr = addr as *const u8;
-        
+
         // Check signature
         let mut matches = true;
         for i in 0..8 {
@@ -159,7 +159,7 @@ unsafe fn search_rsdp(start: usize, length: usize) -> Option<u64> {
             // Verify checksum
             let rsdp_ptr = addr as *const Rsdp;
             let rsdp = ptr::read(rsdp_ptr);
-            
+
             let mut sum: u8 = 0;
             for i in 0..core::mem::size_of::<Rsdp>() {
                 sum = sum.wrapping_add(ptr.add(i).read());
@@ -183,10 +183,10 @@ pub fn init() {
     unsafe {
         if let Some(rsdp_addr) = find_rsdp() {
             rinux_kernel::printk::printk("  ACPI: Found RSDP at address\n");
-            
+
             let rsdp_ptr = rsdp_addr as *const Rsdp;
             let rsdp = ptr::read(rsdp_ptr);
-            
+
             ACPI_INFO.rsdp_address = rsdp_addr;
             ACPI_INFO.revision = rsdp.revision;
 
@@ -200,7 +200,7 @@ pub fn init() {
             // Try to read FADT for power management profile
             if let Some(pm_profile) = read_pm_profile(&rsdp) {
                 ACPI_INFO.pm_profile = pm_profile;
-                
+
                 rinux_kernel::printk::printk("  ACPI: Power Profile - ");
                 match pm_profile {
                     PmProfile::Mobile => rinux_kernel::printk::printk("Mobile/Laptop\n"),
@@ -220,7 +220,7 @@ pub fn init() {
 unsafe fn read_pm_profile(rsdp: &Rsdp) -> Option<PmProfile> {
     // This is a simplified version - would need to parse RSDT/XSDT
     // and find the FADT table
-    
+
     // For now, default to Mobile for laptop support
     Some(PmProfile::Mobile)
 }
@@ -232,7 +232,5 @@ pub fn get_info() -> &'static AcpiInfo {
 
 /// Check if system is a laptop
 pub fn is_laptop() -> bool {
-    unsafe { 
-        matches!(ACPI_INFO.pm_profile, PmProfile::Mobile | PmProfile::Tablet)
-    }
+    unsafe { matches!(ACPI_INFO.pm_profile, PmProfile::Mobile | PmProfile::Tablet) }
 }

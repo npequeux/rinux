@@ -2,12 +2,12 @@
 //!
 //! Graphics drivers for modern laptop GPUs.
 
+pub mod amd;
 pub mod framebuffer;
 pub mod intel;
-pub mod amd;
 pub mod nvidia;
 
-use crate::pci::{PciDevice, PciClass};
+use crate::pci::{PciClass, PciDevice};
 
 /// GPU vendor IDs
 pub const VENDOR_INTEL: u16 = 0x8086;
@@ -70,7 +70,7 @@ pub fn init() {
 
     // Detect GPUs via PCI
     let scanner = crate::pci::scanner();
-    
+
     for device in scanner.find_by_class(PciClass::DisplayController) {
         if let Some(gpu_info) = GpuInfo::from_pci_device(device) {
             rinux_kernel::printk::printk("  Found GPU: ");

@@ -20,14 +20,21 @@ pub trait UsbDriver {
     fn probe(&self, descriptor: &UsbDeviceDescriptor) -> DriverMatch;
 
     /// Bind driver to device
-    fn bind(&mut self, device_address: u8, descriptor: &UsbDeviceDescriptor) -> Result<(), &'static str>;
+    fn bind(
+        &mut self,
+        device_address: u8,
+        descriptor: &UsbDeviceDescriptor,
+    ) -> Result<(), &'static str>;
 
     /// Unbind driver from device
     fn unbind(&mut self, device_address: u8);
 }
 
 /// Try to bind a device to an appropriate driver
-pub fn bind_device(device_address: u8, descriptor: &UsbDeviceDescriptor) -> Result<(), &'static str> {
+pub fn bind_device(
+    device_address: u8,
+    descriptor: &UsbDeviceDescriptor,
+) -> Result<(), &'static str> {
     // Check for HID devices
     if hid::is_hid_device(
         descriptor.device_class,

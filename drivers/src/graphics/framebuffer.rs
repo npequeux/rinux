@@ -48,7 +48,7 @@ impl Framebuffer {
     /// Clear the framebuffer with a color
     pub fn clear(&mut self, color: u32) {
         let pixels = (self.info.height * self.info.pitch / (self.info.bpp / 8)) as usize;
-        
+
         unsafe {
             match self.info.bpp {
                 32 => {
@@ -61,7 +61,7 @@ impl Framebuffer {
                     let r = ((color >> 16) & 0xFF) as u8;
                     let g = ((color >> 8) & 0xFF) as u8;
                     let b = (color & 0xFF) as u8;
-                    
+
                     for i in 0..pixels {
                         let offset = i * 3;
                         ptr::write_volatile(self.buffer.add(offset), b);
@@ -92,7 +92,7 @@ impl Framebuffer {
                     let r = ((color >> 16) & 0xFF) as u8;
                     let g = ((color >> 8) & 0xFF) as u8;
                     let b = (color & 0xFF) as u8;
-                    
+
                     ptr::write_volatile(self.buffer.add(offset), b);
                     ptr::write_volatile(self.buffer.add(offset + 1), g);
                     ptr::write_volatile(self.buffer.add(offset + 2), r);
@@ -131,7 +131,7 @@ impl Framebuffer {
                     let r = ((color >> 16) & 0xFF) as u8;
                     let g = ((color >> 8) & 0xFF) as u8;
                     let b = (color & 0xFF) as u8;
-                    
+
                     for x in 0..self.info.width {
                         let pixel_offset = offset + (x as usize * 3);
                         ptr::write_volatile(self.buffer.add(pixel_offset), b);
@@ -154,7 +154,7 @@ static FRAMEBUFFER: Mutex<Option<Framebuffer>> = Mutex::new(None);
 /// Initialize framebuffer (will be set up by bootloader or UEFI)
 pub fn init() {
     rinux_kernel::printk::printk("  Framebuffer: Waiting for initialization from bootloader\n");
-    
+
     // In a real implementation, this would be set up by the bootloader
     // (GRUB, UEFI) and passed to the kernel via boot parameters
     // For now, we'll just initialize an empty framebuffer
@@ -164,7 +164,7 @@ pub fn init() {
 pub fn setup(info: FramebufferInfo) {
     let fb = Framebuffer::new(info);
     *FRAMEBUFFER.lock() = Some(fb);
-    
+
     rinux_kernel::printk::printk("  Framebuffer initialized: ");
     // TODO: Print resolution
     rinux_kernel::printk::printk("\n");
@@ -181,7 +181,7 @@ pub fn test() {
     if let Some(ref mut fb) = *fb_lock {
         // Clear to black
         fb.clear(0x000000);
-        
+
         // Draw colored bars
         let bar_height = fb.info.height / 4;
         fb.draw_rect(0, 0, fb.info.width, bar_height, 0xFF0000); // Red

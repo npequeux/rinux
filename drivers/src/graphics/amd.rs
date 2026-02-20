@@ -7,17 +7,17 @@ use crate::pci::PciDevice;
 /// AMD GPU families
 #[derive(Debug, Clone, Copy)]
 pub enum AmdFamily {
-    GCN,      // Graphics Core Next (older)
-    RDNA1,    // Radeon DNA 1st gen
-    RDNA2,    // Radeon DNA 2nd gen (RX 6000 series)
-    RDNA3,    // Radeon DNA 3rd gen (RX 7000 series)
+    GCN,   // Graphics Core Next (older)
+    RDNA1, // Radeon DNA 1st gen
+    RDNA2, // Radeon DNA 2nd gen (RX 6000 series)
+    RDNA3, // Radeon DNA 3rd gen (RX 7000 series)
     Unknown,
 }
 
 /// Detect AMD graphics device
 pub fn detect_device(pci_device: &PciDevice) {
     let device_id = pci_device.device_id;
-    
+
     let family = match device_id {
         // RDNA2 (RX 6000 series) - common in laptops
         0x73A0..=0x73FF => AmdFamily::RDNA2,

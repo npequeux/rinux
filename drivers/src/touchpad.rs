@@ -81,13 +81,13 @@ impl Touchpad {
     unsafe fn send_mouse_command(&self, cmd: u8) -> bool {
         self.wait_input();
         outb(PS2_COMMAND, PS2_CMD_AUX_SEND);
-        
+
         self.wait_input();
         outb(PS2_DATA, cmd);
-        
+
         self.wait_output();
         let response = inb(PS2_DATA);
-        
+
         response == 0xFA // ACK
     }
 
@@ -106,11 +106,11 @@ impl Touchpad {
         self.send_mouse_command(MOUSE_CMD_SET_SAMPLE_RATE);
         self.wait_input();
         outb(PS2_DATA, 200);
-        
+
         self.send_mouse_command(MOUSE_CMD_SET_SAMPLE_RATE);
         self.wait_input();
         outb(PS2_DATA, 100);
-        
+
         self.send_mouse_command(MOUSE_CMD_SET_SAMPLE_RATE);
         self.wait_input();
         outb(PS2_DATA, 80);
@@ -119,7 +119,7 @@ impl Touchpad {
         self.send_mouse_command(MOUSE_CMD_GET_DEVICE_ID);
         self.wait_output();
         self.device_id = inb(PS2_DATA);
-        
+
         self.is_intellimouse = self.device_id == 3 || self.device_id == 4;
 
         // Enable data reporting
@@ -143,10 +143,10 @@ impl Touchpad {
             let buttons = self.packet_buffer[0] & 0x07;
             let x_sign = (self.packet_buffer[0] & 0x10) != 0;
             let y_sign = (self.packet_buffer[0] & 0x20) != 0;
-            
+
             let mut x = self.packet_buffer[1] as i16;
             let mut y = self.packet_buffer[2] as i16;
-            
+
             if x_sign {
                 x = x.wrapping_sub(256);
             }

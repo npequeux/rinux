@@ -2,7 +2,7 @@
 //!
 //! High Definition Audio (HDA/Azalia) support for laptop audio.
 
-use crate::pci::{PciDevice, PciClass};
+use crate::pci::{PciClass, PciDevice};
 use core::ptr;
 
 /// Intel HDA vendor/device IDs
@@ -32,13 +32,13 @@ pub const INTEL_HDA_DEVICES: &[(u16, &str)] = &[
 ];
 
 /// HDA register offsets
-const HDA_GCAP: u32 = 0x00;     // Global Capabilities
-const HDA_VMIN: u32 = 0x02;     // Minor Version
-const HDA_VMAJ: u32 = 0x03;     // Major Version
-const HDA_GCTL: u32 = 0x08;     // Global Control
+const HDA_GCAP: u32 = 0x00; // Global Capabilities
+const HDA_VMIN: u32 = 0x02; // Minor Version
+const HDA_VMAJ: u32 = 0x03; // Major Version
+const HDA_GCTL: u32 = 0x08; // Global Control
 const HDA_STATESTS: u32 = 0x0E; // State Change Status
-const HDA_INTCTL: u32 = 0x20;   // Interrupt Control
-const HDA_INTSTS: u32 = 0x24;   // Interrupt Status
+const HDA_INTCTL: u32 = 0x20; // Interrupt Control
+const HDA_INTSTS: u32 = 0x24; // Interrupt Status
 
 /// HDA Global Control register bits
 const HDA_GCTL_RESET: u32 = 1 << 0;
@@ -199,12 +199,14 @@ pub fn init() {
             found_audio = true;
 
             // Check for Intel HDA
-            let is_intel_hda = device.vendor_id == 0x8086 && 
-                INTEL_HDA_DEVICES.iter().any(|(id, _)| *id == device.device_id);
+            let is_intel_hda = device.vendor_id == 0x8086
+                && INTEL_HDA_DEVICES
+                    .iter()
+                    .any(|(id, _)| *id == device.device_id);
 
             if is_intel_hda {
                 rinux_kernel::printk::printk("    Found Intel HDA audio controller\n");
-                
+
                 match HdaController::new(device) {
                     Ok(mut controller) => {
                         if let Err(e) = controller.init() {

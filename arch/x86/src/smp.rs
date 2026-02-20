@@ -2,8 +2,8 @@
 //!
 //! Multi-core CPU initialization and management.
 
-use core::sync::atomic::{AtomicU32, AtomicBool, Ordering};
 use crate::apic;
+use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 /// Maximum number of CPUs supported
 pub const MAX_CPUS: usize = 256;
@@ -79,7 +79,9 @@ fn register_cpu(apic_id: u32) -> Option<u32> {
 pub fn set_cpu_online(cpu_id: u32, online: bool) {
     if cpu_id < MAX_CPUS as u32 {
         unsafe {
-            CPUS[cpu_id as usize].online.store(online, Ordering::Release);
+            CPUS[cpu_id as usize]
+                .online
+                .store(online, Ordering::Release);
         }
     }
 }
@@ -104,10 +106,10 @@ fn detect_cpus_acpi() -> u32 {
 /// Detect CPUs via CPUID
 fn detect_cpus_cpuid() -> u32 {
     use crate::cpu::cpuid;
-    
+
     // Check for HTT (Hyper-Threading Technology)
     let (_, ebx, _, edx) = cpuid(1);
-    
+
     if (edx & (1 << 28)) != 0 {
         // HTT is supported, get logical processor count
         let logical_count = (ebx >> 16) & 0xFF;
@@ -120,14 +122,14 @@ fn detect_cpus_cpuid() -> u32 {
 
 /// Send INIT IPI to a CPU
 fn send_init_ipi(apic_id: u32) {
-    use crate::apic::{write_register, reg};
-    
+    use crate::apic::{reg, write_register};
+
     // Set destination
     write_register(reg::ICR_HIGH, apic_id << 24);
-    
+
     // Send INIT IPI
     write_register(reg::ICR_LOW, 0x00C500);
-    
+
     // Wait for delivery
     while (read_register(reg::ICR_LOW) & (1 << 12)) != 0 {
         core::hint::spin_loop();
@@ -136,15 +138,15 @@ fn send_init_ipi(apic_id: u32) {
 
 /// Send STARTUP IPI to a CPU
 fn send_startup_ipi(apic_id: u32, vector: u8) {
-    use crate::apic::{write_register, reg};
-    
+    use crate::apic::{reg, write_register};
+
     // Set destination
     write_register(reg::ICR_HIGH, apic_id << 24);
-    
+
     // Send STARTUP IPI
     let command = 0x00C600 | (vector as u32);
     write_register(reg::ICR_LOW, command);
-    
+
     // Wait for delivery
     while (read_register(reg::ICR_LOW) & (1 << 12)) != 0 {
         core::hint::spin_loop();
@@ -155,11 +157,11 @@ fn send_startup_ipi(apic_id: u32, vector: u8) {
 extern "C" fn ap_entry() -> ! {
     // Initialize APIC for this CPU
     apic::init();
-    
+
     // Get our APIC ID
     let apic_id = apic::get_id();
     kernel::printk!("[SMP] AP {} started\n", apic_id);
-    
+
     // Mark ourselves as online
     // (Find our CPU ID from APIC ID)
     for i in 0..cpu_count() {
@@ -171,7 +173,7 @@ extern "C" fn ap_entry() -> ! {
             }
         }
     }
-    
+
     // TODO: Enter scheduler idle loop
     loop {
         crate::halt();
@@ -182,24 +184,24 @@ extern "C" fn ap_entry() -> ! {
 fn start_ap(cpu_id: u32) -> bool {
     unsafe {
         let apic_id = CPUS[cpu_id as usize].apic_id;
-        
+
         kernel::printk!("[SMP] Starting AP {} (APIC ID: {})\n", cpu_id, apic_id);
-        
+
         // TODO: Setup trampoline code in low memory
         // For now, we can't actually start APs without proper setup
-        
+
         // Send INIT IPI
         send_init_ipi(apic_id);
-        
+
         // Wait 10ms
         crate::timers::delay_ms(10);
-        
+
         // Send STARTUP IPI (twice as per Intel spec)
         let vector = 0x08; // Trampoline at 0x8000
         send_startup_ipi(apic_id, vector);
         crate::timers::delay_us(200);
         send_startup_ipi(apic_id, vector);
-        
+
         // Wait for AP to start
         for _ in 0..100 {
             if CPUS[cpu_id as usize].started.load(Ordering::Acquire) {
@@ -208,7 +210,7 @@ fn start_ap(cpu_id: u32) -> bool {
             }
             crate::timers::delay_ms(10);
         }
-        
+
         kernel::printk!("[SMP] AP {} failed to start\n", cpu_id);
         false
     }
@@ -217,24 +219,28 @@ fn start_ap(cpu_id: u32) -> bool {
 /// Initialize SMP support
 pub fn init() {
     kernel::printk!("[SMP] Initializing multi-core support...\n");
-    
+
     // Get BSP APIC ID
     let bsp_apic_id = apic::get_id();
     BSP_ID.store(bsp_apic_id, Ordering::Release);
-    
+
     // Register BSP
     if let Some(cpu_id) = register_cpu(bsp_apic_id) {
         set_cpu_online(cpu_id, true);
-        kernel::printk!("[SMP] BSP registered as CPU {} (APIC ID: {})\n", cpu_id, bsp_apic_id);
+        kernel::printk!(
+            "[SMP] BSP registered as CPU {} (APIC ID: {})\n",
+            cpu_id,
+            bsp_apic_id
+        );
     }
-    
+
     // Detect additional CPUs
     let detected = detect_cpus_cpuid();
     kernel::printk!("[SMP] Detected {} CPU(s)\n", detected);
-    
+
     // Try ACPI detection for more accurate info
     let acpi_count = detect_cpus_acpi();
-    
+
     if detected > 1 {
         kernel::printk!("[SMP] Multi-core detected, but AP startup not yet implemented\n");
         kernel::printk!("[SMP] Trampoline code and memory setup required\n");
@@ -243,7 +249,7 @@ pub fn init() {
         //     start_ap(cpu_id);
         // }
     }
-    
+
     kernel::printk!("[SMP] Online CPUs: {}\n", cpu_count());
 }
 

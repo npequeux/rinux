@@ -8,17 +8,17 @@ use core::mem::size_of;
 /// FPU/SSE context saved with FXSAVE
 #[repr(C, align(16))]
 pub struct FxsaveArea {
-    pub fcw: u16,         // FPU Control Word
-    pub fsw: u16,         // FPU Status Word
-    pub ftw: u8,          // FPU Tag Word (abridged)
+    pub fcw: u16, // FPU Control Word
+    pub fsw: u16, // FPU Status Word
+    pub ftw: u8,  // FPU Tag Word (abridged)
     _reserved1: u8,
-    pub fop: u16,         // FPU Opcode
-    pub fip: u64,         // FPU Instruction Pointer
-    pub fdp: u64,         // FPU Data Pointer
-    pub mxcsr: u32,       // MXCSR Register
-    pub mxcsr_mask: u32,  // MXCSR Mask
-    pub st: [u128; 8],    // ST0-ST7 / MM0-MM7
-    pub xmm: [u128; 16],  // XMM0-XMM15
+    pub fop: u16,        // FPU Opcode
+    pub fip: u64,        // FPU Instruction Pointer
+    pub fdp: u64,        // FPU Data Pointer
+    pub mxcsr: u32,      // MXCSR Register
+    pub mxcsr_mask: u32, // MXCSR Mask
+    pub st: [u128; 8],   // ST0-ST7 / MM0-MM7
+    pub xmm: [u128; 16], // XMM0-XMM15
     _reserved2: [u128; 3],
 }
 
@@ -26,14 +26,14 @@ impl FxsaveArea {
     /// Create a new FPU context with default values
     pub const fn new() -> Self {
         Self {
-            fcw: 0x037F,     // Default FPU control word
+            fcw: 0x037F, // Default FPU control word
             fsw: 0,
             ftw: 0,
             _reserved1: 0,
             fop: 0,
             fip: 0,
             fdp: 0,
-            mxcsr: 0x1F80,   // Default MXCSR (all exceptions masked)
+            mxcsr: 0x1F80, // Default MXCSR (all exceptions masked)
             mxcsr_mask: 0xFFFF,
             st: [0; 8],
             xmm: [0; 16],
@@ -124,14 +124,14 @@ pub fn has_avx() -> bool {
 
 /// Enable SSE/SSE2
 pub fn enable_sse() {
-    use crate::long_mode::{read_cr0, write_cr0, read_cr4, write_cr4};
-    
+    use crate::long_mode::{read_cr0, read_cr4, write_cr0, write_cr4};
+
     unsafe {
         // Clear CR0.EM (bit 2) - Enable FPU
         // Set CR0.MP (bit 1) - Monitor coprocessor
         let mut cr0 = read_cr0();
         cr0 &= !(1 << 2); // Clear EM
-        cr0 |= 1 << 1;    // Set MP
+        cr0 |= 1 << 1; // Set MP
         write_cr0(cr0);
 
         // Set CR4.OSFXSR (bit 9) - Enable FXSAVE/FXRSTOR
@@ -164,7 +164,7 @@ pub fn enable_avx() -> bool {
         const XCR0_SSE: u64 = 1 << 1;
         const XCR0_AVX: u64 = 1 << 2;
         let xcr0 = XCR0_X87 | XCR0_SSE | XCR0_AVX;
-        
+
         // Write to XCR0 using XSETBV
         asm!(
             "xsetbv",
@@ -205,8 +205,12 @@ pub fn init() {
     }
 
     kernel::printk!("[FPU] Initialization complete\n");
-    kernel::printk!("[FPU] Features: FXSR={}, XSAVE={}, AVX={}\n", 
-                   has_fxsr(), has_xsave(), has_avx());
+    kernel::printk!(
+        "[FPU] Features: FXSR={}, XSAVE={}, AVX={}\n",
+        has_fxsr(),
+        has_xsave(),
+        has_avx()
+    );
 }
 
 /// Save extended state with XSAVE (if available)
