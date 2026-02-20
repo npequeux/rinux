@@ -19,7 +19,7 @@ jobs:
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rust-src, llvm-tools-preview
+          components: rust-src, llvm-tools-preview, rustfmt, clippy
       
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -75,7 +75,7 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       
       - name: Build kernel
-        run: cargo +nightly build --release --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc
+        run: cargo +nightly build --release --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc -Z json-target-spec
 
   test:
     name: Test
@@ -110,7 +110,7 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       
       - name: Run tests
-        run: cargo +nightly test --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc
+        run: cargo +nightly test --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc -Z json-target-spec
 
   documentation:
     name: Documentation
@@ -121,10 +121,10 @@ jobs:
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rust-src
+          components: rust-src, llvm-tools-preview
       
       - name: Build documentation
-        run: cargo doc --no-deps --all
+        run: cargo doc --no-deps --all --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc -Z json-target-spec
       
       - name: Check documentation links
         run: |
