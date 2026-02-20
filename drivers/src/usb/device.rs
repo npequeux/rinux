@@ -142,6 +142,11 @@ impl UsbDeviceManager {
 static mut DEVICE_MANAGER: UsbDeviceManager = UsbDeviceManager::new();
 
 /// Get device manager
+///
+/// # Safety
+///
+/// This function is safe to call during single-threaded initialization.
+/// In a multi-threaded context, external synchronization is required.
 #[allow(static_mut_refs)]
 pub fn device_manager() -> &'static UsbDeviceManager {
     unsafe { &DEVICE_MANAGER }
@@ -151,7 +156,10 @@ pub fn device_manager() -> &'static UsbDeviceManager {
 ///
 /// # Safety
 ///
-/// The caller must ensure that there are no other active references to the device manager.
+/// The caller must ensure that:
+/// - There are no other active references to the device manager
+/// - No concurrent access occurs (e.g., during single-threaded boot)
+/// TODO: Replace with proper synchronization (Mutex) when threading is added
 #[allow(static_mut_refs)]
 pub unsafe fn device_manager_mut() -> &'static mut UsbDeviceManager {
     &mut DEVICE_MANAGER

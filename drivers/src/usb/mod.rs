@@ -228,10 +228,5 @@ pub fn init() {
         }
     }
 
-    // Display registered devices
-    let dev_mgr = device::device_manager();
-    if dev_mgr.device_count() > 0 {
-        rinux_kernel::printk::printk("USB: Registered ");
-        rinux_kernel::printk::printk(" device(s)\n");
-    }
+    rinux_kernel::printk::printk("USB: Initialization complete\n");
 }

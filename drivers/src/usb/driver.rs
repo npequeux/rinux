@@ -101,6 +101,11 @@ impl Default for UsbDriverManager {
 static mut DRIVER_MANAGER: UsbDriverManager = UsbDriverManager::new();
 
 /// Get driver manager
+///
+/// # Safety
+///
+/// This function is safe to call during single-threaded initialization.
+/// In a multi-threaded context, external synchronization is required.
 #[allow(static_mut_refs)]
 pub fn driver_manager() -> &'static UsbDriverManager {
     unsafe { &DRIVER_MANAGER }
@@ -110,7 +115,10 @@ pub fn driver_manager() -> &'static UsbDriverManager {
 ///
 /// # Safety
 ///
-/// The caller must ensure that there are no other active references to the driver manager.
+/// The caller must ensure that:
+/// - There are no other active references to the driver manager
+/// - No concurrent access occurs (e.g., during single-threaded boot)
+/// TODO: Replace with proper synchronization (Mutex) when threading is added
 #[allow(static_mut_refs)]
 pub unsafe fn driver_manager_mut() -> &'static mut UsbDriverManager {
     &mut DRIVER_MANAGER

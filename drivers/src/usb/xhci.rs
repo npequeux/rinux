@@ -306,13 +306,13 @@ impl UsbHostController for XhciController {
                 rinux_kernel::printk::printk(")\n");
 
                 // Register device with device manager
+                // SAFETY: This is called during single-threaded boot initialization
                 unsafe {
-                    if let Some(_address) = super::device::device_manager_mut()
+                    if super::device::device_manager_mut()
                         .register_device(port, speed)
+                        .is_some()
                     {
-                        rinux_kernel::printk::printk("        Assigned address: ");
-                        // TODO: Print address
-                        rinux_kernel::printk::printk("\n");
+                        rinux_kernel::printk::printk("        Device registered\n");
                     }
                 }
 
