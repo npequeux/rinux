@@ -83,25 +83,31 @@ pub fn init() {
     let mut idt = IDT.lock();
 
     // Set up exception handlers
-    idt.set_handler(0, divide_by_zero_handler as usize as u64);
-    idt.set_handler(1, debug_handler as usize as u64);
-    idt.set_handler(2, nmi_handler as usize as u64);
-    idt.set_handler(3, breakpoint_handler as usize as u64);
-    idt.set_handler(4, overflow_handler as usize as u64);
-    idt.set_handler(5, bound_range_exceeded_handler as usize as u64);
-    idt.set_handler(6, invalid_opcode_handler as usize as u64);
-    idt.set_handler(7, device_not_available_handler as usize as u64);
-    idt.set_handler(8, double_fault_handler as usize as u64);
-    idt.set_handler(10, invalid_tss_handler as usize as u64);
-    idt.set_handler(11, segment_not_present_handler as usize as u64);
-    idt.set_handler(12, stack_segment_fault_handler as usize as u64);
-    idt.set_handler(13, general_protection_fault_handler as usize as u64);
-    idt.set_handler(14, page_fault_handler as usize as u64);
-    idt.set_handler(16, fpu_fault_handler as usize as u64);
-    idt.set_handler(17, alignment_check_handler as usize as u64);
-    idt.set_handler(18, machine_check_handler as usize as u64);
-    idt.set_handler(19, simd_exception_handler as usize as u64);
-    idt.set_handler(20, virtualization_exception_handler as usize as u64);
+    idt.set_handler(0, divide_by_zero_handler as *const () as usize as u64);
+    idt.set_handler(1, debug_handler as *const () as usize as u64);
+    idt.set_handler(2, nmi_handler as *const () as usize as u64);
+    idt.set_handler(3, breakpoint_handler as *const () as usize as u64);
+    idt.set_handler(4, overflow_handler as *const () as usize as u64);
+    idt.set_handler(5, bound_range_exceeded_handler as *const () as usize as u64);
+    idt.set_handler(6, invalid_opcode_handler as *const () as usize as u64);
+    idt.set_handler(7, device_not_available_handler as *const () as usize as u64);
+    idt.set_handler(8, double_fault_handler as *const () as usize as u64);
+    idt.set_handler(10, invalid_tss_handler as *const () as usize as u64);
+    idt.set_handler(11, segment_not_present_handler as *const () as usize as u64);
+    idt.set_handler(12, stack_segment_fault_handler as *const () as usize as u64);
+    idt.set_handler(
+        13,
+        general_protection_fault_handler as *const () as usize as u64,
+    );
+    idt.set_handler(14, page_fault_handler as *const () as usize as u64);
+    idt.set_handler(16, fpu_fault_handler as *const () as usize as u64);
+    idt.set_handler(17, alignment_check_handler as *const () as usize as u64);
+    idt.set_handler(18, machine_check_handler as *const () as usize as u64);
+    idt.set_handler(19, simd_exception_handler as *const () as usize as u64);
+    idt.set_handler(
+        20,
+        virtualization_exception_handler as *const () as usize as u64,
+    );
 
     let pointer = idt.pointer();
 

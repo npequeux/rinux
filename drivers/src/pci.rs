@@ -361,6 +361,7 @@ static mut PCI_SCANNER: PciScanner = PciScanner::new();
 pub fn init() {
     rinux_kernel::printk::printk("Initializing PCI subsystem...\n");
 
+    #[allow(static_mut_refs)]
     unsafe {
         PCI_SCANNER.scan();
 
@@ -385,6 +386,7 @@ pub fn init() {
 }
 
 /// Get a reference to the PCI scanner
+#[allow(static_mut_refs)]
 pub fn scanner() -> &'static PciScanner {
     unsafe { &PCI_SCANNER }
 }
@@ -394,6 +396,7 @@ pub fn scanner() -> &'static PciScanner {
 /// # Safety
 ///
 /// The caller must ensure that there are no other active references to the PCI scanner.
+#[allow(static_mut_refs)]
 pub unsafe fn scanner_mut() -> &'static mut PciScanner {
     &mut PCI_SCANNER
 }

@@ -143,6 +143,12 @@ pub struct UsbDevice {
     pub protocol: u8,
 }
 
+impl Default for UsbDevice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UsbDevice {
     pub const fn new() -> Self {
         Self {

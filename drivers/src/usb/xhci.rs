@@ -52,11 +52,14 @@ struct XhciPortRegs {
 /// USB Command register bits
 const USBCMD_RUN: u32 = 1 << 0;
 const USBCMD_RESET: u32 = 1 << 1;
+#[allow(dead_code)]
 const USBCMD_INTERRUPTER_ENABLE: u32 = 1 << 2;
+#[allow(dead_code)]
 const USBCMD_HOST_SYSTEM_ERROR_ENABLE: u32 = 1 << 3;
 
 /// USB Status register bits
 const USBSTS_HCH: u32 = 1 << 0; // HC Halted
+#[allow(dead_code)]
 const USBSTS_HSE: u32 = 1 << 2; // Host System Error
 #[allow(dead_code)]
 const USBSTS_EINT: u32 = 1 << 3; // Event Interrupt
