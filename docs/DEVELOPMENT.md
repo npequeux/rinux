@@ -107,6 +107,23 @@ Place in `arch/<arch>/` directory:
 
 ### Unit Tests
 
+Rinux uses Rust's built-in testing framework for unit tests. Since Rinux is a `no_std` kernel, tests must be run with a standard target rather than the custom kernel target.
+
+#### Running Tests
+
+```bash
+# Run all library tests
+cd lib && cargo +nightly test --lib --target x86_64-unknown-linux-gnu
+
+# Run all kernel tests
+cd kernel && cargo +nightly test --lib --target x86_64-unknown-linux-gnu
+
+# Run tests for a specific module
+cd lib && cargo +nightly test --lib --target x86_64-unknown-linux-gnu math
+```
+
+#### Writing Tests
+
 ```rust
 #[cfg(test)]
 mod tests {
@@ -116,12 +133,37 @@ mod tests {
     fn test_something() {
         assert_eq!(2 + 2, 4);
     }
+    
+    #[test]
+    fn test_with_setup() {
+        let value = calculate_something();
+        assert!(value > 0);
+    }
 }
+```
+
+#### Test Coverage
+
+Current test coverage:
+- **lib/**: 27 tests covering math, string, list, and version functions
+- **kernel/**: 34 tests covering types, PID allocation, and task management
+- **Total**: 61 unit tests
+
+To see which tests are available:
+```bash
+cargo +nightly test --lib --target x86_64-unknown-linux-gnu -- --list
 ```
 
 ### Integration Tests
 
-Run full kernel in QEMU and verify behavior.
+Run full kernel in QEMU and verify behavior:
+```bash
+make run
+```
+
+### CI/CD Tests
+
+Tests are automatically run in GitHub Actions on every push and pull request. See `.github/workflows/ci.yml` for details.
 
 ## Debugging
 
