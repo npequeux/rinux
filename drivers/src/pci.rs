@@ -432,7 +432,7 @@ fn print_hex_u16(n: u16) {
         digits.as_bytes()[(n & 0xF) as usize] as char,
     ];
     
-    for digit in hex_digits {
+    for &digit in &hex_digits {
         print_char(digit);
     }
 }
@@ -445,7 +445,7 @@ fn print_hex_u8(n: u8) {
         digits.as_bytes()[(n & 0xF) as usize] as char,
     ];
     
-    for digit in hex_digits {
+    for &digit in &hex_digits {
         print_char(digit);
     }
 }
