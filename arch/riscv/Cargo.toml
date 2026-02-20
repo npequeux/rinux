@@ -1,0 +1,13 @@
+[package]
+name = "arch-riscv"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kernel = { path = "../../kernel" }
+spin = "0.9"
+bitflags = "2.4"
+
+[lib]
+name = "arch_riscv"
+path = "src/lib.rs"

@@ -130,12 +130,27 @@ type HandlerFuncWithErrCode = extern "x86-interrupt" fn(InterruptStackFrame, err
 
 /// Interrupt stack frame
 #[repr(C)]
-struct InterruptStackFrame {
-    instruction_pointer: u64,
-    code_segment: u64,
-    cpu_flags: u64,
-    stack_pointer: u64,
-    stack_segment: u64,
+pub struct InterruptStackFrame {
+    pub instruction_pointer: VirtAddr,
+    pub code_segment: u64,
+    pub cpu_flags: u64,
+    pub stack_pointer: VirtAddr,
+    pub stack_segment: u64,
+}
+
+/// Virtual address wrapper
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VirtAddr(u64);
+
+impl VirtAddr {
+    pub const fn new(addr: u64) -> Self {
+        Self(addr)
+    }
+
+    pub const fn as_u64(self) -> u64 {
+        self.0
+    }
 }
 
 // Exception handlers

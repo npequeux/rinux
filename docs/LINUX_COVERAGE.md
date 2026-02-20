@@ -42,12 +42,14 @@
 - **Platform Support:** Embedded, desktop, server, mainframe, supercomputers
 
 ### Rinux
-- **Supported Architectures:** 1
-  - x86_64 only
-- **Portability:** Basic architecture abstraction started
-- **Platform Support:** QEMU/virtual machines only
+- **Supported Architectures:** 3
+  - x86_64 (fully implemented)
+  - ARM64/AArch64 (basic support)
+  - RISC-V 64 (basic support)
+- **Portability:** Architecture abstraction layer in place
+- **Platform Support:** QEMU/virtual machines, expanding to real hardware
 
-**Coverage: ~3% (1 of 30+ architectures)**
+**Coverage: ~10% (3 of 30+ architectures)**
 
 ### Implementation Details (Rinux)
 
@@ -61,17 +63,20 @@
 - PIC (8259) interrupt controller initialization
 - Paging data structures with proper flags
 
-#### ❌ Missing
+#### ✅ Implemented
 - Long mode setup and transition
-- APIC/x2APIC support (only legacy PIC)
-- Multi-core/SMP support
-- NUMA awareness
-- Power management (ACPI basic detection only, no control)
-- CPU hotplug
-- Exception handlers (framework only)
-- FPU/SSE context saving
+- APIC/x2APIC support (with legacy PIC fallback)
+- Multi-core/SMP support (detection and framework)
+- Exception handlers (complete implementation)
+- FPU/SSE/AVX context saving
 - TSC/HPET timers
-- ARM, RISC-V, or any other architecture
+- ARM64 (AArch64) architecture support
+- RISC-V 64 architecture support
+
+#### ⚠️ Partial / In Progress
+- NUMA awareness (detection only, no optimization)
+- Power management (ACPI detection, no control)
+- CPU hotplug (framework only, not functional)
 
 ---
 

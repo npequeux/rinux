@@ -57,7 +57,7 @@ impl CpuInfo {
 }
 
 /// Execute CPUID instruction
-fn cpuid(leaf: u32) -> (u32, u32, u32, u32) {
+pub fn cpuid(leaf: u32) -> (u32, u32, u32, u32) {
     let mut eax: u32;
     let mut ebx: u32;
     let mut ecx: u32;
