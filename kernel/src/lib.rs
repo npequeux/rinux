@@ -4,15 +4,26 @@
 
 #![no_std]
 
+extern crate alloc;
+
 pub mod init;
 pub mod panic;
 pub mod printk;
 pub mod process;
+pub mod syscall;
 pub mod types;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
 static KERNEL_INITIALIZED: AtomicBool = AtomicBool::new(false);
+
+/// Kernel panic macro - wraps core::panic!
+#[macro_export]
+macro_rules! panic {
+    ($($arg:tt)*) => {
+        core::panic!($($arg)*)
+    };
+}
 
 /// Initialize the kernel
 pub fn init() {
@@ -25,6 +36,12 @@ pub fn init() {
 
     // Initialize subsystems
     init::early_init();
+
+    // Initialize scheduler
+    process::sched::init();
+
+    // Initialize syscall interface
+    syscall::init();
 
     KERNEL_INITIALIZED.store(true, Ordering::Release);
     printk::printk("Kernel subsystems initialized\n");

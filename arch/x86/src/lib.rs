@@ -5,6 +5,9 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 
+// Re-export kernel crate as `kernel` for internal use
+extern crate rinux_kernel as kernel;
+
 pub mod apic;
 pub mod boot;
 pub mod cpu;

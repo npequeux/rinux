@@ -77,6 +77,8 @@ pub extern "x86-interrupt" fn double_fault_handler(
     kernel::printk!("RSP: {:#x}\n", stack_frame.stack_pointer.as_u64());
     kernel::printk!("SS:  {:#x}\n", stack_frame.stack_segment);
     kernel::panic!("Double Fault");
+    #[allow(unreachable_code)]
+    loop {}
 }
 
 /// Invalid TSS (#TS)
@@ -170,6 +172,8 @@ pub extern "x86-interrupt" fn machine_check_handler(stack_frame: InterruptStackF
     kernel::printk!("\n[EXCEPTION] Machine Check (#MC)\n");
     kernel::printk!("RIP: {:#x}\n", stack_frame.instruction_pointer.as_u64());
     kernel::panic!("Machine Check");
+    #[allow(unreachable_code)]
+    loop {}
 }
 
 /// SIMD Floating-Point Exception (#XM)

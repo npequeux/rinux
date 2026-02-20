@@ -10,7 +10,9 @@ pub mod graphics;
 pub mod keyboard;
 pub mod pci;
 pub mod power;
+pub mod rtc;
 pub mod serial;
+pub mod timer;
 pub mod touchpad;
 pub mod usb;
 pub mod vga;
@@ -20,6 +22,12 @@ pub fn init() {
     serial::init();
     keyboard::init();
     vga::init();
+
+    // Initialize RTC
+    rtc::init();
+
+    // Initialize timer (100 Hz = 10ms tick)
+    timer::init(100);
 
     // Initialize ACPI for power management and system info
     acpi::init();

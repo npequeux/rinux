@@ -4,6 +4,9 @@
 
 #![no_std]
 
+// Re-export kernel crate as `kernel` for internal use
+extern crate rinux_kernel as kernel;
+
 pub mod boot;
 pub mod cpu;
 pub mod csr;
