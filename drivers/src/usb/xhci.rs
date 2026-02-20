@@ -307,7 +307,7 @@ impl UsbHostController for XhciController {
 
                 // Register device with device manager
                 unsafe {
-                    if let Some(address) = super::device::device_manager_mut()
+                    if let Some(_address) = super::device::device_manager_mut()
                         .register_device(port, speed)
                     {
                         rinux_kernel::printk::printk("        Assigned address: ");
