@@ -35,6 +35,12 @@ pub struct FrameAllocator {
     allocated_frames: u64,
 }
 
+impl Default for FrameAllocator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FrameAllocator {
     pub const fn new() -> Self {
         FrameAllocator {

@@ -4,8 +4,8 @@
 
 use core::arch::asm;
 
-/// Page table entry flags
 bitflags::bitflags! {
+    /// Page table entry flags
     pub struct PageTableFlags: u64 {
         const PRESENT        = 1 << 0;
         const WRITABLE       = 1 << 1;
@@ -24,6 +24,12 @@ bitflags::bitflags! {
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
 pub struct PageTableEntry(u64);
+
+impl Default for PageTableEntry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl PageTableEntry {
     pub const fn new() -> Self {
@@ -53,6 +59,12 @@ pub struct PageTable {
     entries: [PageTableEntry; 512],
 }
 
+impl Default for PageTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PageTable {
     pub const fn new() -> Self {
         PageTable {
@@ -77,6 +89,10 @@ pub fn read_cr3() -> u64 {
 }
 
 /// Set CR3 (page table register)
+///
+/// # Safety
+///
+/// The caller must ensure that the value is a valid physical address of a page table.
 pub unsafe fn write_cr3(value: u64) {
     asm!("mov cr3, {}", in(reg) value, options(nostack));
 }

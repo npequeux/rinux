@@ -13,6 +13,7 @@ pub enum CpuVendor {
 }
 
 /// CPU information
+#[allow(dead_code)]
 pub struct CpuInfo {
     vendor: CpuVendor,
     family: u32,
@@ -131,6 +132,10 @@ fn detect_features() -> CpuFeatures {
 }
 
 /// Read MSR
+///
+/// # Safety
+///
+/// The caller must ensure that the specified MSR is valid and accessible.
 pub unsafe fn rdmsr(msr: u32) -> u64 {
     let (low, high): (u32, u32);
     asm!(
@@ -144,6 +149,11 @@ pub unsafe fn rdmsr(msr: u32) -> u64 {
 }
 
 /// Write MSR
+///
+/// # Safety
+///
+/// The caller must ensure that the specified MSR is valid and accessible, and that
+/// the value being written is appropriate for the MSR.
 pub unsafe fn wrmsr(msr: u32, value: u64) {
     let low = value as u32;
     let high = (value >> 32) as u32;

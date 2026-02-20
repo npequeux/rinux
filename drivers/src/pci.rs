@@ -257,8 +257,8 @@ pub fn read_device_info(address: PciAddress) -> Option<PciDevice> {
 
     // Read BARs
     let mut bars = [0u32; 6];
-    for i in 0..6 {
-        bars[i] = pci_config_read(address, 0x10 + (i as u8 * 4));
+    for (i, bar) in bars.iter_mut().enumerate() {
+        *bar = pci_config_read(address, 0x10 + (i as u8 * 4));
     }
 
     Some(PciDevice {
@@ -278,6 +278,12 @@ pub fn read_device_info(address: PciAddress) -> Option<PciDevice> {
 pub struct PciScanner {
     devices: [Option<PciDevice>; 256],
     count: usize,
+}
+
+impl Default for PciScanner {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PciScanner {
@@ -384,6 +390,10 @@ pub fn scanner() -> &'static PciScanner {
 }
 
 /// Get a mutable reference to the PCI scanner
+///
+/// # Safety
+///
+/// The caller must ensure that there are no other active references to the PCI scanner.
 pub unsafe fn scanner_mut() -> &'static mut PciScanner {
     &mut PCI_SCANNER
 }

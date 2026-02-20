@@ -58,27 +58,37 @@ const USBCMD_HOST_SYSTEM_ERROR_ENABLE: u32 = 1 << 3;
 /// USB Status register bits
 const USBSTS_HCH: u32 = 1 << 0; // HC Halted
 const USBSTS_HSE: u32 = 1 << 2; // Host System Error
+#[allow(dead_code)]
 const USBSTS_EINT: u32 = 1 << 3; // Event Interrupt
+#[allow(dead_code)]
 const USBSTS_PCD: u32 = 1 << 4; // Port Change Detect
 const USBSTS_CNR: u32 = 1 << 11; // Controller Not Ready
 
 /// Port status and control register bits
 const PORTSC_CCS: u32 = 1 << 0; // Current Connect Status
+#[allow(dead_code)]
 const PORTSC_PED: u32 = 1 << 1; // Port Enabled/Disabled
 const PORTSC_PR: u32 = 1 << 4; // Port Reset
+#[allow(dead_code)]
 const PORTSC_PLS_MASK: u32 = 0xF << 5; // Port Link State
+#[allow(dead_code)]
 const PORTSC_PP: u32 = 1 << 9; // Port Power
 const PORTSC_SPEED_MASK: u32 = 0xF << 10; // Port Speed
+#[allow(dead_code)]
 const PORTSC_CSC: u32 = 1 << 17; // Connect Status Change
+#[allow(dead_code)]
 const PORTSC_PRC: u32 = 1 << 21; // Port Reset Change
+#[allow(dead_code)]
 const PORTSC_WPR: u32 = 1 << 31; // Warm Port Reset
 
 /// xHCI controller
 pub struct XhciController {
+    #[allow(dead_code)]
     cap_regs: *mut XhciCapRegs,
     op_regs: *mut XhciOpRegs,
     port_regs: *mut XhciPortRegs,
     num_ports: u8,
+    #[allow(dead_code)]
     base_addr: u64,
 }
 

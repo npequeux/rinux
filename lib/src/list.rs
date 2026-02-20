@@ -7,9 +7,17 @@ use core::ptr::NonNull;
 
 /// List node
 pub struct ListNode<T> {
+    #[allow(dead_code)]
     next: Option<NonNull<ListNode<T>>>,
+    #[allow(dead_code)]
     prev: Option<NonNull<ListNode<T>>>,
     _marker: PhantomData<T>,
+}
+
+impl<T> Default for ListNode<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T> ListNode<T> {
@@ -24,9 +32,17 @@ impl<T> ListNode<T> {
 
 /// Linked list
 pub struct List<T> {
+    #[allow(dead_code)]
     head: Option<NonNull<ListNode<T>>>,
+    #[allow(dead_code)]
     tail: Option<NonNull<ListNode<T>>>,
     len: usize,
+}
+
+impl<T> Default for List<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T> List<T> {

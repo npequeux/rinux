@@ -19,6 +19,12 @@ pub struct BumpAllocator {
     next: usize,
 }
 
+impl Default for BumpAllocator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BumpAllocator {
     pub const fn new() -> Self {
         BumpAllocator {
@@ -28,6 +34,11 @@ impl BumpAllocator {
         }
     }
 
+    /// Initialize the allocator with custom heap region
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the specified heap region is valid and not in use.
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.heap_start = heap_start;
         self.heap_end = heap_start + heap_size;

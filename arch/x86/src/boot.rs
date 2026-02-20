@@ -30,7 +30,7 @@ const STACK_SIZE: usize = 16384;
 
 /// Boot stack
 #[repr(align(16))]
-struct BootStack([u8; STACK_SIZE]);
+struct BootStack(#[allow(dead_code)] [u8; STACK_SIZE]);
 
 #[used]
 static mut BOOT_STACK: BootStack = BootStack([0; STACK_SIZE]);
