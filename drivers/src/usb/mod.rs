@@ -3,6 +3,11 @@
 //! This module provides USB host controller and device support.
 
 pub mod xhci;
+pub mod transfer;
+pub mod device;
+pub mod hid;
+pub mod mass_storage;
+pub mod driver;
 
 use core::fmt;
 
@@ -188,6 +193,12 @@ pub trait UsbHostController {
 pub fn init() {
     rinux_kernel::printk::printk("Initializing USB subsystem...\n");
 
+    // Initialize HID driver
+    hid::init();
+
+    // Initialize mass storage driver
+    mass_storage::init();
+
     // Find all USB controllers via PCI
     let scanner = crate::pci::scanner();
 
@@ -215,5 +226,12 @@ pub fn init() {
                 }
             }
         }
+    }
+
+    // Display registered devices
+    let dev_mgr = device::device_manager();
+    if dev_mgr.device_count() > 0 {
+        rinux_kernel::printk::printk("USB: Registered ");
+        rinux_kernel::printk::printk(" device(s)\n");
     }
 }
