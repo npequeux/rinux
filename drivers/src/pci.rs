@@ -388,6 +388,16 @@ pub fn init() {
     }
 }
 
+/// Helper function to print a single character digit
+fn print_char(ch: char) {
+    rinux_kernel::printk::printk(match ch {
+        '0' => "0", '1' => "1", '2' => "2", '3' => "3", '4' => "4",
+        '5' => "5", '6' => "6", '7' => "7", '8' => "8", '9' => "9",
+        'a' => "a", 'b' => "b", 'c' => "c", 'd' => "d", 'e' => "e", 'f' => "f",
+        _ => "?",
+    });
+}
+
 /// Helper function to print a number
 fn print_number(n: usize) {
     if n == 0 {
@@ -408,12 +418,7 @@ fn print_number(n: usize) {
     
     // Print digits in reverse order
     for i in (0..count).rev() {
-        let ch = digits[i] as char;
-        rinux_kernel::printk::printk(match ch {
-            '0' => "0", '1' => "1", '2' => "2", '3' => "3", '4' => "4",
-            '5' => "5", '6' => "6", '7' => "7", '8' => "8", '9' => "9",
-            _ => "?",
-        });
+        print_char(digits[i] as char);
     }
 }
 
@@ -427,13 +432,8 @@ fn print_hex_u16(n: u16) {
         digits.as_bytes()[(n & 0xF) as usize] as char,
     ];
     
-    for digit in hex_digits.iter() {
-        rinux_kernel::printk::printk(match digit {
-            '0' => "0", '1' => "1", '2' => "2", '3' => "3", '4' => "4",
-            '5' => "5", '6' => "6", '7' => "7", '8' => "8", '9' => "9",
-            'a' => "a", 'b' => "b", 'c' => "c", 'd' => "d", 'e' => "e", 'f' => "f",
-            _ => "?",
-        });
+    for digit in hex_digits {
+        print_char(digit);
     }
 }
 
@@ -445,13 +445,8 @@ fn print_hex_u8(n: u8) {
         digits.as_bytes()[(n & 0xF) as usize] as char,
     ];
     
-    for digit in hex_digits.iter() {
-        rinux_kernel::printk::printk(match digit {
-            '0' => "0", '1' => "1", '2' => "2", '3' => "3", '4' => "4",
-            '5' => "5", '6' => "6", '7' => "7", '8' => "8", '9' => "9",
-            'a' => "a", 'b' => "b", 'c' => "c", 'd' => "d", 'e' => "e", 'f' => "f",
-            _ => "?",
-        });
+    for digit in hex_digits {
+        print_char(digit);
     }
 }
 
