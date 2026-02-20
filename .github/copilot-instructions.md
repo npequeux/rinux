@@ -299,13 +299,13 @@ pub enum Color {
 ## Resources
 
 - [Rust Book](https://doc.rust-lang.org/book/)
-- [Rust OS Development Tutorial](https://os.phil-opp.com/)
+- [Writing an OS in Rust by Philipp Oppermann](https://os.phil-opp.com/)
 - [OSDev Wiki](https://wiki.osdev.org/)
 - Project docs in `docs/` directory
 
 ## Current Limitations
 
-⚠️ Rinux is in early development (v0.1.x):
+**WARNING:** Rinux is in early development (v0.1.x):
 - No user authentication or access control yet
 - Limited hardware support
 - Not suitable for production use
