@@ -18,12 +18,67 @@ const STATUS_INPUT_FULL: u8 = 0x02;
 /// Timeout iterations for waiting operations
 const TIMEOUT_ITERATIONS: u32 = 1000;
 
+/// Keyboard commands
+const KB_CMD_SET_LEDS: u8 = 0xED;
+const KB_CMD_ECHO: u8 = 0xEE;
+const KB_CMD_SCAN_CODE_SET: u8 = 0xF0;
+const KB_CMD_IDENTIFY: u8 = 0xF2;
+const KB_CMD_TYPEMATIC: u8 = 0xF3;
+const KB_CMD_ENABLE_SCAN: u8 = 0xF4;
+const KB_CMD_DISABLE_SCAN: u8 = 0xF5;
+const KB_CMD_RESET: u8 = 0xFF;
+
+/// Keyboard LEDs
+const LED_SCROLL_LOCK: u8 = 0x01;
+const LED_NUM_LOCK: u8 = 0x02;
+const LED_CAPS_LOCK: u8 = 0x04;
+
+/// Keyboard state flags
+#[derive(Debug, Clone, Copy)]
+pub struct KeyboardState {
+    pub shift_pressed: bool,
+    pub ctrl_pressed: bool,
+    pub alt_pressed: bool,
+    pub caps_lock: bool,
+    pub num_lock: bool,
+    pub scroll_lock: bool,
+}
+
+impl KeyboardState {
+    const fn new() -> Self {
+        Self {
+            shift_pressed: false,
+            ctrl_pressed: false,
+            alt_pressed: false,
+            caps_lock: false,
+            num_lock: false,
+            scroll_lock: false,
+        }
+    }
+
+    fn toggle_caps_lock(&mut self) {
+        self.caps_lock = !self.caps_lock;
+    }
+
+    fn toggle_num_lock(&mut self) {
+        self.num_lock = !self.num_lock;
+    }
+
+    fn toggle_scroll_lock(&mut self) {
+        self.scroll_lock = !self.scroll_lock;
+    }
+}
+
 /// Global keyboard state
-static KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard { initialized: false });
+static KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard {
+    initialized: false,
+    state: KeyboardState::new(),
+});
 
 /// Keyboard structure
 pub struct Keyboard {
     initialized: bool,
+    state: KeyboardState,
 }
 
 impl Keyboard {
@@ -112,6 +167,90 @@ impl Keyboard {
             None
         }
     }
+
+    /// Send command to keyboard
+    ///
+    /// # Safety
+    ///
+    /// Performs I/O port operations.
+    unsafe fn send_command(&self, cmd: u8) -> bool {
+        self.wait_input_empty();
+        outb(DATA_PORT, cmd);
+
+        // Wait for ACK (0xFA)
+        for _ in 0..TIMEOUT_ITERATIONS {
+            if let Some(response) = self.read_scancode() {
+                return response == 0xFA;
+            }
+            core::hint::spin_loop();
+        }
+        false
+    }
+
+    /// Set keyboard LEDs
+    ///
+    /// # Safety
+    ///
+    /// Performs I/O port operations.
+    unsafe fn set_leds(&self, leds: u8) {
+        if self.send_command(KB_CMD_SET_LEDS) {
+            self.wait_input_empty();
+            outb(DATA_PORT, leds);
+            // Wait for ACK
+            for _ in 0..TIMEOUT_ITERATIONS {
+                if let Some(response) = self.read_scancode() {
+                    if response == 0xFA {
+                        break;
+                    }
+                }
+                core::hint::spin_loop();
+            }
+        }
+    }
+
+    /// Update LED state based on keyboard state
+    unsafe fn update_leds(&self) {
+        let mut leds = 0u8;
+        if self.state.scroll_lock {
+            leds |= LED_SCROLL_LOCK;
+        }
+        if self.state.num_lock {
+            leds |= LED_NUM_LOCK;
+        }
+        if self.state.caps_lock {
+            leds |= LED_CAPS_LOCK;
+        }
+        self.set_leds(leds);
+    }
+
+    /// Process a scancode and update keyboard state
+    unsafe fn process_scancode(&mut self, scancode: u8) {
+        // Handle key releases (high bit set)
+        let released = (scancode & 0x80) != 0;
+        let scancode = scancode & 0x7F;
+
+        match scancode {
+            0x2A | 0x36 => self.state.shift_pressed = !released, // Left/Right Shift
+            0x1D => self.state.ctrl_pressed = !released,         // Ctrl
+            0x38 => self.state.alt_pressed = !released,          // Alt
+            0x3A if !released => {
+                // Caps Lock (toggle on press)
+                self.state.toggle_caps_lock();
+                self.update_leds();
+            }
+            0x45 if !released => {
+                // Num Lock (toggle on press)
+                self.state.toggle_num_lock();
+                self.update_leds();
+            }
+            0x46 if !released => {
+                // Scroll Lock (toggle on press)
+                self.state.toggle_scroll_lock();
+                self.update_leds();
+            }
+            _ => {}
+        }
+    }
 }
 
 /// Initialize keyboard
@@ -126,65 +265,154 @@ pub fn init() {
 ///
 /// Returns raw scancode if available.
 pub fn read_scancode() -> Option<u8> {
-    let kb = KEYBOARD.lock();
+    let mut kb = KEYBOARD.lock();
     if kb.initialized {
-        unsafe { kb.read_scancode() }
+        let scancode = unsafe { kb.read_scancode() };
+        if let Some(sc) = scancode {
+            unsafe {
+                kb.process_scancode(sc);
+            }
+        }
+        scancode
     } else {
         None
     }
 }
 
-/// Read a key from keyboard
+/// Get current keyboard state
+pub fn get_state() -> KeyboardState {
+    let kb = KEYBOARD.lock();
+    kb.state
+}
+
+/// Set keyboard LED state
+pub fn set_leds(scroll_lock: bool, num_lock: bool, caps_lock: bool) {
+    let mut kb = KEYBOARD.lock();
+    if kb.initialized {
+        kb.state.scroll_lock = scroll_lock;
+        kb.state.num_lock = num_lock;
+        kb.state.caps_lock = caps_lock;
+        unsafe {
+            kb.update_leds();
+        }
+    }
+}
+
+/// Read a key from keyboard with modifier support
 ///
-/// Returns ASCII character if available (simplified mapping).
+/// Returns ASCII character if available with shift/caps lock support.
 pub fn read_key() -> Option<u8> {
-    read_scancode().and_then(|scancode| {
-        // Simplified scancode to ASCII mapping for Set 1
-        // Only handle key presses (not releases)
-        if scancode & 0x80 != 0 {
-            return None; // Key release
+    let mut kb = KEYBOARD.lock();
+    if !kb.initialized {
+        return None;
+    }
+
+    let scancode = unsafe { kb.read_scancode() };
+    if let Some(sc) = scancode {
+        unsafe {
+            kb.process_scancode(sc);
         }
 
-        match scancode {
-            0x02 => Some(b'1'),
-            0x03 => Some(b'2'),
-            0x04 => Some(b'3'),
-            0x05 => Some(b'4'),
-            0x06 => Some(b'5'),
-            0x07 => Some(b'6'),
-            0x08 => Some(b'7'),
-            0x09 => Some(b'8'),
-            0x0A => Some(b'9'),
-            0x0B => Some(b'0'),
-            0x10 => Some(b'q'),
-            0x11 => Some(b'w'),
-            0x12 => Some(b'e'),
-            0x13 => Some(b'r'),
-            0x14 => Some(b't'),
-            0x15 => Some(b'y'),
-            0x16 => Some(b'u'),
-            0x17 => Some(b'i'),
-            0x18 => Some(b'o'),
-            0x19 => Some(b'p'),
-            0x1E => Some(b'a'),
-            0x1F => Some(b's'),
-            0x20 => Some(b'd'),
-            0x21 => Some(b'f'),
-            0x22 => Some(b'g'),
-            0x23 => Some(b'h'),
-            0x24 => Some(b'j'),
-            0x25 => Some(b'k'),
-            0x26 => Some(b'l'),
-            0x2C => Some(b'z'),
-            0x2D => Some(b'x'),
-            0x2E => Some(b'c'),
-            0x2F => Some(b'v'),
-            0x30 => Some(b'b'),
-            0x31 => Some(b'n'),
-            0x32 => Some(b'm'),
-            0x39 => Some(b' '),  // Space
-            0x1C => Some(b'\n'), // Enter
-            _ => None,
+        // Only handle key presses (not releases)
+        if sc & 0x80 != 0 {
+            return None;
         }
-    })
+
+        let is_shifted = kb.state.shift_pressed;
+        let is_caps = kb.state.caps_lock;
+
+        // Scancode to ASCII mapping with shift support
+        scancode_to_ascii(sc, is_shifted, is_caps)
+    } else {
+        None
+    }
+}
+
+/// Convert scancode to ASCII with shift and caps lock support
+fn scancode_to_ascii(scancode: u8, shift: bool, caps: bool) -> Option<u8> {
+    match scancode {
+        // Number row
+        0x02 if shift => Some(b'!'),
+        0x02 => Some(b'1'),
+        0x03 if shift => Some(b'@'),
+        0x03 => Some(b'2'),
+        0x04 if shift => Some(b'#'),
+        0x04 => Some(b'3'),
+        0x05 if shift => Some(b'$'),
+        0x05 => Some(b'4'),
+        0x06 if shift => Some(b'%'),
+        0x06 => Some(b'5'),
+        0x07 if shift => Some(b'^'),
+        0x07 => Some(b'6'),
+        0x08 if shift => Some(b'&'),
+        0x08 => Some(b'7'),
+        0x09 if shift => Some(b'*'),
+        0x09 => Some(b'8'),
+        0x0A if shift => Some(b'('),
+        0x0A => Some(b'9'),
+        0x0B if shift => Some(b')'),
+        0x0B => Some(b'0'),
+        0x0C if shift => Some(b'_'),
+        0x0C => Some(b'-'),
+        0x0D if shift => Some(b'+'),
+        0x0D => Some(b'='),
+
+        // Letters - Q row
+        0x10 => Some(if shift ^ caps { b'Q' } else { b'q' }),
+        0x11 => Some(if shift ^ caps { b'W' } else { b'w' }),
+        0x12 => Some(if shift ^ caps { b'E' } else { b'e' }),
+        0x13 => Some(if shift ^ caps { b'R' } else { b'r' }),
+        0x14 => Some(if shift ^ caps { b'T' } else { b't' }),
+        0x15 => Some(if shift ^ caps { b'Y' } else { b'y' }),
+        0x16 => Some(if shift ^ caps { b'U' } else { b'u' }),
+        0x17 => Some(if shift ^ caps { b'I' } else { b'i' }),
+        0x18 => Some(if shift ^ caps { b'O' } else { b'o' }),
+        0x19 => Some(if shift ^ caps { b'P' } else { b'p' }),
+        0x1A if shift => Some(b'{'),
+        0x1A => Some(b'['),
+        0x1B if shift => Some(b'}'),
+        0x1B => Some(b']'),
+
+        // Letters - A row
+        0x1E => Some(if shift ^ caps { b'A' } else { b'a' }),
+        0x1F => Some(if shift ^ caps { b'S' } else { b's' }),
+        0x20 => Some(if shift ^ caps { b'D' } else { b'd' }),
+        0x21 => Some(if shift ^ caps { b'F' } else { b'f' }),
+        0x22 => Some(if shift ^ caps { b'G' } else { b'g' }),
+        0x23 => Some(if shift ^ caps { b'H' } else { b'h' }),
+        0x24 => Some(if shift ^ caps { b'J' } else { b'j' }),
+        0x25 => Some(if shift ^ caps { b'K' } else { b'k' }),
+        0x26 => Some(if shift ^ caps { b'L' } else { b'l' }),
+        0x27 if shift => Some(b':'),
+        0x27 => Some(b';'),
+        0x28 if shift => Some(b'"'),
+        0x28 => Some(b'\''),
+        0x29 if shift => Some(b'~'),
+        0x29 => Some(b'`'),
+
+        // Letters - Z row
+        0x2B if shift => Some(b'|'),
+        0x2B => Some(b'\\'),
+        0x2C => Some(if shift ^ caps { b'Z' } else { b'z' }),
+        0x2D => Some(if shift ^ caps { b'X' } else { b'x' }),
+        0x2E => Some(if shift ^ caps { b'C' } else { b'c' }),
+        0x2F => Some(if shift ^ caps { b'V' } else { b'v' }),
+        0x30 => Some(if shift ^ caps { b'B' } else { b'b' }),
+        0x31 => Some(if shift ^ caps { b'N' } else { b'n' }),
+        0x32 => Some(if shift ^ caps { b'M' } else { b'm' }),
+        0x33 if shift => Some(b'<'),
+        0x33 => Some(b','),
+        0x34 if shift => Some(b'>'),
+        0x34 => Some(b'.'),
+        0x35 if shift => Some(b'?'),
+        0x35 => Some(b'/'),
+
+        // Special keys
+        0x39 => Some(b' '),    // Space
+        0x1C => Some(b'\n'),   // Enter
+        0x0E => Some(b'\x08'), // Backspace
+        0x0F => Some(b'\t'),   // Tab
+
+        _ => None,
+    }
 }
