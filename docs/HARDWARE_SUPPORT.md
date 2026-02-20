@@ -655,6 +655,6 @@ Hardware support will expand gradually as the kernel matures. Contributions are 
 
 ---
 
-**Last Updated**: 2026-02-20  
+**Last Updated**: February 2026  
 **Rinux Version**: 0.1.0  
 **Maintainers**: Rinux Project Contributors

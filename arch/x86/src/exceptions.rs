@@ -77,8 +77,6 @@ pub extern "x86-interrupt" fn double_fault_handler(
     rinux_kernel::printk!("RSP: {:#x}\n", stack_frame.stack_pointer.as_u64());
     rinux_kernel::printk!("SS:  {:#x}\n", stack_frame.stack_segment);
     panic!("Double Fault");
-    #[allow(clippy::never_loop, clippy::empty_loop)]
-    loop {}
 }
 
 /// Invalid TSS (#TS)
@@ -172,8 +170,6 @@ pub extern "x86-interrupt" fn machine_check_handler(stack_frame: InterruptStackF
     rinux_kernel::printk!("\n[EXCEPTION] Machine Check (#MC)\n");
     rinux_kernel::printk!("RIP: {:#x}\n", stack_frame.instruction_pointer.as_u64());
     panic!("Machine Check");
-    #[allow(clippy::never_loop, clippy::empty_loop)]
-    loop {}
 }
 
 /// SIMD Floating-Point Exception (#XM)
