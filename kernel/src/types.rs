@@ -85,7 +85,7 @@ mod tests {
         let addr1 = PhysAddr::new(0x1000);
         let addr2 = PhysAddr::new(0x1000);
         let addr3 = PhysAddr::new(0x2000);
-        
+
         assert_eq!(addr1, addr2);
         assert_ne!(addr1, addr3);
     }
@@ -95,7 +95,7 @@ mod tests {
         let addr1 = PhysAddr::new(0x1000);
         let addr2 = PhysAddr::new(0x2000);
         let addr3 = PhysAddr::new(0x3000);
-        
+
         assert!(addr1 < addr2);
         assert!(addr2 < addr3);
         assert!(addr1 < addr3);
@@ -147,7 +147,7 @@ mod tests {
         let addr1 = VirtAddr::new(0x1000);
         let addr2 = VirtAddr::new(0x1000);
         let addr3 = VirtAddr::new(0x2000);
-        
+
         assert_eq!(addr1, addr2);
         assert_ne!(addr1, addr3);
     }
@@ -157,7 +157,7 @@ mod tests {
         let addr1 = VirtAddr::new(0x1000);
         let addr2 = VirtAddr::new(0x2000);
         let addr3 = VirtAddr::new(0x3000);
-        
+
         assert!(addr1 < addr2);
         assert!(addr2 < addr3);
         assert!(addr1 < addr3);
@@ -183,7 +183,7 @@ mod tests {
     fn test_phys_virt_addr_different_types() {
         let phys = PhysAddr::new(0x1000);
         let virt = VirtAddr::new(0x1000);
-        
+
         // These should be different types
         assert_eq!(phys.as_u64(), virt.as_u64());
     }
@@ -192,7 +192,7 @@ mod tests {
     fn test_addr_const_fn() {
         const PHYS: PhysAddr = PhysAddr::new(0x1000);
         const VIRT: VirtAddr = VirtAddr::new(0x2000);
-        
+
         assert_eq!(PHYS.as_u64(), 0x1000);
         assert_eq!(VIRT.as_u64(), 0x2000);
     }
@@ -204,7 +204,7 @@ mod tests {
         let _gid: Gid = 1000;
         let _fd: Fd = 3;
         let _errno: Errno = -1;
-        
+
         // Just verify type aliases work
         assert_eq!(_pid, 1);
         assert_eq!(_uid, 1000);

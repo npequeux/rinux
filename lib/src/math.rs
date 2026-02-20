@@ -54,14 +54,14 @@ mod tests {
         assert_eq!(align_up(3, 4), 4);
         assert_eq!(align_up(4, 4), 4);
         assert_eq!(align_up(5, 4), 8);
-        
+
         // Test alignment to 8
         assert_eq!(align_up(0, 8), 0);
         assert_eq!(align_up(1, 8), 8);
         assert_eq!(align_up(7, 8), 8);
         assert_eq!(align_up(8, 8), 8);
         assert_eq!(align_up(9, 8), 16);
-        
+
         // Test alignment to page size (4096)
         assert_eq!(align_up(0, 4096), 0);
         assert_eq!(align_up(1, 4096), 4096);
@@ -81,14 +81,14 @@ mod tests {
         assert_eq!(align_down(5, 4), 4);
         assert_eq!(align_down(7, 4), 4);
         assert_eq!(align_down(8, 4), 8);
-        
+
         // Test alignment to 8
         assert_eq!(align_down(0, 8), 0);
         assert_eq!(align_down(7, 8), 0);
         assert_eq!(align_down(8, 8), 8);
         assert_eq!(align_down(15, 8), 8);
         assert_eq!(align_down(16, 8), 16);
-        
+
         // Test alignment to page size (4096)
         assert_eq!(align_down(0, 4096), 0);
         assert_eq!(align_down(4095, 4096), 0);
@@ -108,14 +108,14 @@ mod tests {
         assert!(!is_aligned(5, 4));
         assert!(is_aligned(8, 4));
         assert!(is_aligned(12, 4));
-        
+
         // Test alignment to 8
         assert!(is_aligned(0, 8));
         assert!(!is_aligned(4, 8));
         assert!(is_aligned(8, 8));
         assert!(!is_aligned(12, 8));
         assert!(is_aligned(16, 8));
-        
+
         // Test alignment to page size (4096)
         assert!(is_aligned(0, 4096));
         assert!(!is_aligned(1, 4096));
@@ -130,7 +130,7 @@ mod tests {
         // Test zero and one
         assert!(!is_power_of_2(0));
         assert!(is_power_of_2(1));
-        
+
         // Test powers of 2
         assert!(is_power_of_2(2));
         assert!(is_power_of_2(4));
@@ -143,7 +143,7 @@ mod tests {
         assert!(is_power_of_2(512));
         assert!(is_power_of_2(1024));
         assert!(is_power_of_2(4096));
-        
+
         // Test non-powers of 2
         assert!(!is_power_of_2(3));
         assert!(!is_power_of_2(5));

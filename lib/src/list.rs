@@ -130,7 +130,7 @@ mod tests {
         let list_i32: List<i32> = List::new();
         let list_u64: List<u64> = List::new();
         let list_str: List<&str> = List::new();
-        
+
         assert!(list_i32.is_empty());
         assert!(list_u64.is_empty());
         assert!(list_str.is_empty());

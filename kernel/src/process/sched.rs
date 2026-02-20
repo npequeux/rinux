@@ -41,12 +41,12 @@ impl Scheduler {
     /// Add a task to the scheduler
     pub fn add_task(&mut self, task: Task) {
         let pid = task.pid;
-        
+
         // Ensure the tasks vector is large enough
         while self.tasks.len() <= pid as usize {
             self.tasks.push(None);
         }
-        
+
         self.tasks[pid as usize] = Some(task);
         self.ready_queue.push_back(pid);
     }
@@ -129,13 +129,13 @@ pub fn init() {
     }
 
     let mut sched = SCHEDULER.lock();
-    
+
     // Create idle task (PID 0)
     let idle_task = Task::new(0);
     sched.add_task(idle_task);
 
     SCHEDULER_INITIALIZED.store(true, Ordering::Release);
-    
+
     crate::printk::printk("  Scheduler initialized (round-robin)\n");
 }
 

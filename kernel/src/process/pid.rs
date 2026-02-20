@@ -37,7 +37,7 @@ mod tests {
         let pid1 = allocate_pid();
         let pid2 = allocate_pid();
         let pid3 = allocate_pid();
-        
+
         // PIDs should be strictly increasing for successive allocations
         assert!(pid2 > pid1);
         assert!(pid3 > pid2);
@@ -47,7 +47,7 @@ mod tests {
     fn test_allocate_pid_unique() {
         let pid1 = allocate_pid();
         let pid2 = allocate_pid();
-        
+
         // PIDs should be unique
         assert_ne!(pid1, pid2);
     }
@@ -65,7 +65,7 @@ mod tests {
         for _ in 0..10 {
             pids.push(allocate_pid());
         }
-        
+
         // All PIDs should be unique
         for i in 0..pids.len() {
             for j in (i + 1)..pids.len() {
