@@ -29,15 +29,10 @@ mod tests {
 
     #[test]
     fn test_strcmp_equal() {
-<<<<<<< copilot/increase-linux-coverage
         assert_eq!(strcmp("", ""), 0);
         assert_eq!(strcmp("a", "a"), 0);
         assert_eq!(strcmp("hello", "hello"), 0);
         assert_eq!(strcmp("test string", "test string"), 0);
-=======
-        assert_eq!(strcmp("hello", "hello"), 0);
-        assert_eq!(strcmp("", ""), 0);
->>>>>>> master
     }
 
     #[test]

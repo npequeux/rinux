@@ -32,7 +32,7 @@ This document provides a summary of test coverage for the Rinux operating system
 - `test_is_aligned` - Tests alignment checking
 - `test_is_power_of_2` - Tests power of 2 detection
 
-**lib/src/string.rs** - 8 test functions
+**lib/src/string.rs** - 10 test functions
 - `test_strcmp_equal` - Tests string comparison for equal strings
 - `test_strcmp_less_than` - Tests string comparison for less than
 - `test_strcmp_greater_than` - Tests string comparison for greater than
@@ -44,7 +44,7 @@ This document provides a summary of test coverage for the Rinux operating system
 - `test_strchr_special_chars` - Tests special character handling
 - `test_strchr_unicode` - Tests basic unicode support
 
-**lib/src/list.rs** - 11 test functions
+**lib/src/list.rs** - 9 test functions
 - `test_list_node_new` - Tests ListNode creation
 - `test_list_node_default` - Tests ListNode default trait
 - `test_list_new` - Tests List creation

@@ -43,13 +43,17 @@ test:
 	@echo "Running unit tests..."
 	@echo "Testing rinux-lib..."
 	@mv .cargo/config.toml .cargo/config.toml.tmp 2>/dev/null || true
-	@cd lib && cargo +nightly test --lib --target x86_64-unknown-linux-gnu
-	@mv .cargo/config.toml.tmp .cargo/config.toml 2>/dev/null || true
+	@(cd lib && cargo +nightly test --lib --target x86_64-unknown-linux-gnu); \
+	  EXIT_CODE=$$?; \
+	  mv .cargo/config.toml.tmp .cargo/config.toml 2>/dev/null || true; \
+	  exit $$EXIT_CODE
 	@echo ""
 	@echo "Testing rinux-kernel..."
 	@mv .cargo/config.toml .cargo/config.toml.tmp 2>/dev/null || true
-	@cd kernel && cargo +nightly test --lib --target x86_64-unknown-linux-gnu
-	@mv .cargo/config.toml.tmp .cargo/config.toml 2>/dev/null || true
+	@(cd kernel && cargo +nightly test --lib --target x86_64-unknown-linux-gnu); \
+	  EXIT_CODE=$$?; \
+	  mv .cargo/config.toml.tmp .cargo/config.toml 2>/dev/null || true; \
+	  exit $$EXIT_CODE
 	@echo ""
 	@echo "All tests passed!"
 

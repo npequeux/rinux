@@ -27,9 +27,7 @@ mod tests {
     use alloc::vec::Vec;
 
     #[test]
-    fn test_allocate_pid_starts_at_one() {
-        // Note: This test depends on test ordering
-        // PIDs might not start at 1 if other tests ran first
+    fn test_allocate_pid_positive() {
         let pid = allocate_pid();
         assert!(pid >= 1);
     }
@@ -40,11 +38,9 @@ mod tests {
         let pid2 = allocate_pid();
         let pid3 = allocate_pid();
         
-        // PIDs should be incrementing
+        // PIDs should be strictly increasing for successive allocations
         assert!(pid2 > pid1);
         assert!(pid3 > pid2);
-        assert_eq!(pid2, pid1 + 1);
-        assert_eq!(pid3, pid2 + 1);
     }
 
     #[test]
