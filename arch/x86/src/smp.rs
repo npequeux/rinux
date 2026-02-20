@@ -29,7 +29,7 @@ impl CpuInfo {
 }
 
 /// Global CPU information array
-static mut CPUS: [CpuInfo; MAX_CPUS] = [CpuInfo::new(); MAX_CPUS];
+static mut CPUS: [CpuInfo; MAX_CPUS] = [const { CpuInfo::new() }; MAX_CPUS];
 
 /// Number of detected CPUs
 static CPU_COUNT: AtomicU32 = AtomicU32::new(0);

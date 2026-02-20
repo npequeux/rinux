@@ -14,6 +14,14 @@ use core::sync::atomic::{AtomicBool, Ordering};
 
 static KERNEL_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
+/// Kernel panic macro - wraps core::panic!
+#[macro_export]
+macro_rules! panic {
+    ($($arg:tt)*) => {
+        core::panic!($($arg)*)
+    };
+}
+
 /// Initialize the kernel
 pub fn init() {
     if KERNEL_INITIALIZED.load(Ordering::Acquire) {
