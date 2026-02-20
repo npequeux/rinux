@@ -223,13 +223,16 @@ make clean      # Clean artifacts
 
 ### Printing to Console
 
-```rust
-use rinux_kernel::printk::printk;
+Two forms are available for printing:
 
+```rust
+// 1. Function form - for simple string literals
+use rinux_kernel::printk::printk;
 printk("Hello from kernel\n");
 
-// Or use the macro:
+// 2. Macro form - for formatted output (preferred for formatting)
 printk!("Value: {}\n", value);
+printkln!("With newline: {}", value);  // Includes automatic newline
 ```
 
 ### Inline Assembly
