@@ -1,7 +1,7 @@
 # Rinux
 
 [![CI](https://github.com/npequeux/rinux/actions/workflows/ci.yml/badge.svg)](https://github.com/npequeux/rinux/actions/workflows/ci.yml)
-[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-nightly-orange.svg)](https://www.rust-lang.org/)
 [![Platform](https://img.shields.io/badge/platform-x86__64-lightgrey.svg)](https://github.com/npequeux/rinux)
 
@@ -59,7 +59,7 @@ rinux/
 
 ## License
 
-Rinux is licensed under GPL-2.0, similar to Linux.
+Rinux is licensed under the MIT License.
 
 ## Contributing
 

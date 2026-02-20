@@ -82,7 +82,7 @@ rinux/
 ├── README.md                     # Project overview
 ├── CHANGELOG.md                  # Version history
 ├── CONTRIBUTING.md               # Contribution guide
-└── LICENSE                       # GPL-2.0 license
+└── LICENSE                       # MIT license
 ```
 
 ## Statistics
