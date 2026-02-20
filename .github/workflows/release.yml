@@ -21,7 +21,7 @@ jobs:
           components: rust-src, llvm-tools-preview
       
       - name: Build kernel (release)
-        run: cargo +nightly build --release --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc -Z json-target-spec
+        run: cargo +nightly build --release
       
       - name: Create release archive
         run: |

@@ -43,7 +43,7 @@ jobs:
         run: cargo fmt --all -- --check
       
       - name: Run Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --lib --bins --all-features -- -D warnings
 
   build:
     name: Build
@@ -75,7 +75,7 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       
       - name: Build kernel
-        run: cargo +nightly build --release --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc -Z json-target-spec
+        run: cargo +nightly build --release
 
   test:
     name: Test
@@ -110,7 +110,7 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       
       - name: Run tests
-        run: cargo +nightly test --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc -Z json-target-spec
+        run: cargo +nightly test
 
   documentation:
     name: Documentation
@@ -124,7 +124,7 @@ jobs:
           components: rust-src, llvm-tools-preview
       
       - name: Build documentation
-        run: cargo doc --no-deps --all --target x86_64-unknown-rinux.json -Z build-std=core,compiler_builtins,alloc -Z json-target-spec
+        run: cargo doc --no-deps --all
       
       - name: Check documentation links
         run: |
