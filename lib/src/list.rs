@@ -2,8 +2,8 @@
 //!
 //! Intrusive linked list implementation.
 
-use core::ptr::NonNull;
 use core::marker::PhantomData;
+use core::ptr::NonNull;
 
 /// List node
 pub struct ListNode<T> {
@@ -37,11 +37,11 @@ impl<T> List<T> {
             len: 0,
         }
     }
-    
+
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
-    
+
     pub fn len(&self) -> usize {
         self.len
     }

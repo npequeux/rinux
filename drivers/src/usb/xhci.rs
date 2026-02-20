@@ -2,51 +2,51 @@
 //!
 //! USB 3.0+ host controller driver.
 
-use core::ptr;
-use crate::pci::PciDevice;
 use super::{UsbHostController, UsbSpeed};
+use crate::pci::PciDevice;
+use core::ptr;
 
 /// xHCI capability registers (offset from base)
 #[repr(C)]
 #[derive(Debug)]
 struct XhciCapRegs {
-    caplength: u8,      // 0x00: Capability register length
+    caplength: u8, // 0x00: Capability register length
     _reserved: u8,
-    hciversion: u16,    // 0x02: Interface version number
-    hcsparams1: u32,    // 0x04: Structural parameters 1
-    hcsparams2: u32,    // 0x08: Structural parameters 2
-    hcsparams3: u32,    // 0x0C: Structural parameters 3
-    hccparams1: u32,    // 0x10: Capability parameters 1
-    dboff: u32,         // 0x14: Doorbell offset
-    rtsoff: u32,        // 0x18: Runtime register space offset
-    hccparams2: u32,    // 0x1C: Capability parameters 2
+    hciversion: u16, // 0x02: Interface version number
+    hcsparams1: u32, // 0x04: Structural parameters 1
+    hcsparams2: u32, // 0x08: Structural parameters 2
+    hcsparams3: u32, // 0x0C: Structural parameters 3
+    hccparams1: u32, // 0x10: Capability parameters 1
+    dboff: u32,      // 0x14: Doorbell offset
+    rtsoff: u32,     // 0x18: Runtime register space offset
+    hccparams2: u32, // 0x1C: Capability parameters 2
 }
 
 /// xHCI operational registers
 #[repr(C)]
 #[derive(Debug)]
 struct XhciOpRegs {
-    usbcmd: u32,        // 0x00: USB command
-    usbsts: u32,        // 0x04: USB status
-    pagesize: u32,      // 0x08: Page size
+    usbcmd: u32,   // 0x00: USB command
+    usbsts: u32,   // 0x04: USB status
+    pagesize: u32, // 0x08: Page size
     _reserved1: [u32; 2],
-    dnctrl: u32,        // 0x14: Device notification control
-    crcr_lo: u32,       // 0x18: Command ring control (low)
-    crcr_hi: u32,       // 0x1C: Command ring control (high)
+    dnctrl: u32,  // 0x14: Device notification control
+    crcr_lo: u32, // 0x18: Command ring control (low)
+    crcr_hi: u32, // 0x1C: Command ring control (high)
     _reserved2: [u32; 4],
-    dcbaap_lo: u32,     // 0x30: Device context base address array pointer (low)
-    dcbaap_hi: u32,     // 0x34: Device context base address array pointer (high)
-    config: u32,        // 0x38: Configure
+    dcbaap_lo: u32, // 0x30: Device context base address array pointer (low)
+    dcbaap_hi: u32, // 0x34: Device context base address array pointer (high)
+    config: u32,    // 0x38: Configure
 }
 
 /// xHCI port register set
 #[repr(C)]
 #[derive(Debug)]
 struct XhciPortRegs {
-    portsc: u32,        // Port status and control
-    portpmsc: u32,      // Port power management status and control
-    portli: u32,        // Port link info
-    porthlpmc: u32,     // Port hardware LPM control
+    portsc: u32,    // Port status and control
+    portpmsc: u32,  // Port power management status and control
+    portli: u32,    // Port link info
+    porthlpmc: u32, // Port hardware LPM control
 }
 
 /// USB Command register bits
@@ -56,22 +56,22 @@ const USBCMD_INTERRUPTER_ENABLE: u32 = 1 << 2;
 const USBCMD_HOST_SYSTEM_ERROR_ENABLE: u32 = 1 << 3;
 
 /// USB Status register bits
-const USBSTS_HCH: u32 = 1 << 0;  // HC Halted
-const USBSTS_HSE: u32 = 1 << 2;  // Host System Error
+const USBSTS_HCH: u32 = 1 << 0; // HC Halted
+const USBSTS_HSE: u32 = 1 << 2; // Host System Error
 const USBSTS_EINT: u32 = 1 << 3; // Event Interrupt
-const USBSTS_PCD: u32 = 1 << 4;  // Port Change Detect
+const USBSTS_PCD: u32 = 1 << 4; // Port Change Detect
 const USBSTS_CNR: u32 = 1 << 11; // Controller Not Ready
 
 /// Port status and control register bits
-const PORTSC_CCS: u32 = 1 << 0;   // Current Connect Status
-const PORTSC_PED: u32 = 1 << 1;   // Port Enabled/Disabled
-const PORTSC_PR: u32 = 1 << 4;    // Port Reset
+const PORTSC_CCS: u32 = 1 << 0; // Current Connect Status
+const PORTSC_PED: u32 = 1 << 1; // Port Enabled/Disabled
+const PORTSC_PR: u32 = 1 << 4; // Port Reset
 const PORTSC_PLS_MASK: u32 = 0xF << 5; // Port Link State
-const PORTSC_PP: u32 = 1 << 9;    // Port Power
+const PORTSC_PP: u32 = 1 << 9; // Port Power
 const PORTSC_SPEED_MASK: u32 = 0xF << 10; // Port Speed
-const PORTSC_CSC: u32 = 1 << 17;  // Connect Status Change
-const PORTSC_PRC: u32 = 1 << 21;  // Port Reset Change
-const PORTSC_WPR: u32 = 1 << 31;  // Warm Port Reset
+const PORTSC_CSC: u32 = 1 << 17; // Connect Status Change
+const PORTSC_PRC: u32 = 1 << 21; // Port Reset Change
+const PORTSC_WPR: u32 = 1 << 31; // Warm Port Reset
 
 /// xHCI controller
 pub struct XhciController {
@@ -87,14 +87,14 @@ impl XhciController {
     pub fn new(pci_dev: &PciDevice) -> Result<Self, &'static str> {
         // Get BAR0 (memory mapped registers)
         let bar0 = pci_dev.bars[0];
-        
+
         if bar0 == 0 || (bar0 & 1) == 1 {
             return Err("Invalid BAR0");
         }
 
         // Clear bits to get base address
         let base_addr = (bar0 & !0xF) as u64;
-        
+
         // For 64-bit BAR, combine with BAR1
         let base_addr = if (bar0 & 0x4) != 0 {
             base_addr | ((pci_dev.bars[1] as u64) << 32)
@@ -107,14 +107,14 @@ impl XhciController {
         }
 
         let cap_regs = base_addr as *mut XhciCapRegs;
-        
+
         unsafe {
             let caplength = ptr::read_volatile(&(*cap_regs).caplength);
             let op_regs = (base_addr + caplength as u64) as *mut XhciOpRegs;
-            
+
             let hcsparams1 = ptr::read_volatile(&(*cap_regs).hcsparams1);
             let num_ports = (hcsparams1 >> 24) as u8;
-            
+
             let port_regs = (op_regs as u64 + 0x400) as *mut XhciPortRegs;
 
             Ok(Self {
@@ -177,7 +177,7 @@ impl XhciController {
         unsafe {
             let portsc = self.read_port_reg(port, 0);
             let speed = ((portsc & PORTSC_SPEED_MASK) >> 10) as u8;
-            
+
             match speed {
                 1 => UsbSpeed::Full,
                 2 => UsbSpeed::Low,
@@ -280,7 +280,7 @@ impl UsbHostController for XhciController {
                 rinux_kernel::printk::printk("      Port ");
                 // TODO: Print port number
                 rinux_kernel::printk::printk(": Device connected (");
-                
+
                 let speed = self.get_port_speed(port);
                 match speed {
                     UsbSpeed::Low => rinux_kernel::printk::printk("Low Speed"),
@@ -289,7 +289,7 @@ impl UsbHostController for XhciController {
                     UsbSpeed::Super => rinux_kernel::printk::printk("Super Speed"),
                     UsbSpeed::SuperPlus => rinux_kernel::printk::printk("Super Speed+"),
                 }
-                
+
                 rinux_kernel::printk::printk(")\n");
                 count += 1;
             }
@@ -306,11 +306,11 @@ pub fn init_controller(pci_dev: &PciDevice) -> Result<(), &'static str> {
     pci_dev.enable_memory_space();
 
     let mut controller = XhciController::new(pci_dev)?;
-    
+
     rinux_kernel::printk::printk("    xHCI version: ");
     // TODO: Print version
     rinux_kernel::printk::printk("\n");
-    
+
     rinux_kernel::printk::printk("    Ports: ");
     // TODO: Print port count
     rinux_kernel::printk::printk("\n");
@@ -323,7 +323,7 @@ pub fn init_controller(pci_dev: &PciDevice) -> Result<(), &'static str> {
 
     // Enumerate devices
     let device_count = controller.enumerate_devices();
-    
+
     if device_count > 0 {
         rinux_kernel::printk::printk("    Found ");
         // TODO: Print device count

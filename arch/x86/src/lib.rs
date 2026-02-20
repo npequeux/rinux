@@ -18,13 +18,13 @@ pub mod paging;
 pub fn init() {
     // Setup GDT
     gdt::init();
-    
+
     // Setup IDT
     idt::init();
-    
+
     // Initialize interrupts
     interrupts::init();
-    
+
     // Setup paging
     paging::init();
 }

@@ -36,7 +36,7 @@ pub fn total_memory() -> u64 {
 fn detect_memory_e820() -> u64 {
     // This would be populated by the bootloader
     // For now, return a default value
-    512 * 1024 * 1024  // 512 MB
+    512 * 1024 * 1024 // 512 MB
 }
 
 /// Physical to virtual address conversion

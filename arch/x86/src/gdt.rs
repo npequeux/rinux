@@ -28,7 +28,7 @@ impl GdtEntry {
             base_high: 0,
         }
     }
-    
+
     const fn new(base: u32, limit: u32, access: u8, granularity: u8) -> Self {
         GdtEntry {
             limit_low: (limit & 0xFFFF) as u16,
@@ -58,15 +58,15 @@ impl Gdt {
     const fn new() -> Self {
         Gdt {
             entries: [
-                GdtEntry::null(),                                    // 0x00: Null
-                GdtEntry::new(0, 0xFFFFF, 0x9A, 0xA0),              // 0x08: Code segment (64-bit)
-                GdtEntry::new(0, 0xFFFFF, 0x92, 0xA0),              // 0x10: Data segment (64-bit)
-                GdtEntry::new(0, 0xFFFFF, 0xFA, 0xA0),              // 0x18: User code segment
-                GdtEntry::new(0, 0xFFFFF, 0xF2, 0xA0),              // 0x20: User data segment
+                GdtEntry::null(),                      // 0x00: Null
+                GdtEntry::new(0, 0xFFFFF, 0x9A, 0xA0), // 0x08: Code segment (64-bit)
+                GdtEntry::new(0, 0xFFFFF, 0x92, 0xA0), // 0x10: Data segment (64-bit)
+                GdtEntry::new(0, 0xFFFFF, 0xFA, 0xA0), // 0x18: User code segment
+                GdtEntry::new(0, 0xFFFFF, 0xF2, 0xA0), // 0x20: User data segment
             ],
         }
     }
-    
+
     fn pointer(&self) -> GdtPointer {
         GdtPointer {
             limit: (core::mem::size_of::<Self>() - 1) as u16,
@@ -81,14 +81,14 @@ static GDT: Mutex<Gdt> = Mutex::new(Gdt::new());
 pub fn init() {
     let gdt = GDT.lock();
     let pointer = gdt.pointer();
-    
+
     unsafe {
         asm!(
             "lgdt [{}]",
             in(reg) &pointer,
             options(readonly, nostack)
         );
-        
+
         // Reload segment registers
         asm!(
             "push 0x08",

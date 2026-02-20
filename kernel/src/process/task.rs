@@ -2,7 +2,7 @@
 //!
 //! Process/thread task structure.
 
-use crate::types::{Pid, Uid, Gid};
+use crate::types::{Gid, Pid, Uid};
 
 /// Task state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

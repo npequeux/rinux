@@ -32,7 +32,7 @@ impl PhysAddr {
     pub const fn new(addr: u64) -> Self {
         PhysAddr(addr)
     }
-    
+
     /// Get the address as a u64
     pub const fn as_u64(&self) -> u64 {
         self.0
@@ -44,7 +44,7 @@ impl VirtAddr {
     pub const fn new(addr: u64) -> Self {
         VirtAddr(addr)
     }
-    
+
     /// Get the address as a u64
     pub const fn as_u64(&self) -> u64 {
         self.0

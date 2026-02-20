@@ -21,7 +21,7 @@ impl Frame {
             number: addr / FRAME_SIZE as u64,
         }
     }
-    
+
     /// Get the start address of the frame
     pub fn start_address(&self) -> u64 {
         self.number * FRAME_SIZE as u64
@@ -43,13 +43,13 @@ impl FrameAllocator {
             allocated_frames: 0,
         }
     }
-    
+
     pub fn init(&mut self, memory_start: u64, memory_end: u64) {
         self.next_free_frame = Frame::containing_address(memory_start);
         self.total_frames = (memory_end - memory_start) / FRAME_SIZE as u64;
         self.allocated_frames = 0;
     }
-    
+
     /// Allocate a frame
     pub fn allocate_frame(&mut self) -> Option<Frame> {
         if self.allocated_frames >= self.total_frames {
@@ -61,13 +61,13 @@ impl FrameAllocator {
             Some(frame)
         }
     }
-    
+
     /// Deallocate a frame
     pub fn deallocate_frame(&mut self, _frame: Frame) {
         // TODO: Implement proper deallocation
         self.allocated_frames = self.allocated_frames.saturating_sub(1);
     }
-    
+
     /// Get number of free frames
     pub fn free_frames(&self) -> u64 {
         self.total_frames - self.allocated_frames

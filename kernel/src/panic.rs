@@ -17,7 +17,7 @@ pub fn handle_panic(info: &str, file: &str, _line: u32) -> ! {
     printk(info);
     printk("\n");
     printk("=====================================\n");
-    
+
     // Halt all CPUs
     loop {
         unsafe {

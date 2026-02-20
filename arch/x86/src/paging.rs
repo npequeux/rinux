@@ -29,19 +29,19 @@ impl PageTableEntry {
     pub const fn new() -> Self {
         PageTableEntry(0)
     }
-    
+
     pub fn is_present(&self) -> bool {
         self.flags().contains(PageTableFlags::PRESENT)
     }
-    
+
     pub fn flags(&self) -> PageTableFlags {
         PageTableFlags::from_bits_truncate(self.0)
     }
-    
+
     pub fn addr(&self) -> u64 {
         self.0 & 0x000F_FFFF_FFFF_F000
     }
-    
+
     pub fn set(&mut self, addr: u64, flags: PageTableFlags) {
         self.0 = (addr & 0x000F_FFFF_FFFF_F000) | flags.bits();
     }
@@ -59,7 +59,7 @@ impl PageTable {
             entries: [PageTableEntry::new(); 512],
         }
     }
-    
+
     pub fn zero(&mut self) {
         for entry in self.entries.iter_mut() {
             *entry = PageTableEntry::new();

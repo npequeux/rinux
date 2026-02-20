@@ -71,7 +71,11 @@ pub struct PciAddress {
 
 impl PciAddress {
     pub const fn new(bus: u8, device: u8, function: u8) -> Self {
-        Self { bus, device, function }
+        Self {
+            bus,
+            device,
+            function,
+        }
     }
 
     /// Build the address for PCI configuration space access
@@ -80,7 +84,7 @@ impl PciAddress {
         let device = self.device as u32;
         let function = self.function as u32;
         let offset = (offset & 0xFC) as u32;
-        
+
         0x8000_0000 | (bus << 16) | (device << 11) | (function << 8) | offset
     }
 }
@@ -293,7 +297,7 @@ impl PciScanner {
             for device in 0..32u8 {
                 for function in 0..8u8 {
                     let address = PciAddress::new(bus, device, function);
-                    
+
                     if let Some(dev_info) = read_device_info(address) {
                         if self.count < 256 {
                             self.devices[self.count] = Some(dev_info);
@@ -350,10 +354,10 @@ static mut PCI_SCANNER: PciScanner = PciScanner::new();
 /// Initialize PCI subsystem
 pub fn init() {
     rinux_kernel::printk::printk("Initializing PCI subsystem...\n");
-    
+
     unsafe {
         PCI_SCANNER.scan();
-        
+
         rinux_kernel::printk::printk("PCI: Found ");
         // TODO: Print number
         rinux_kernel::printk::printk(" devices\n");
