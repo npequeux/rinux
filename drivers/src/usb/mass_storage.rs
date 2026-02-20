@@ -60,13 +60,13 @@ impl MassStorageDevice {
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy)]
 pub struct CommandBlockWrapper {
-    pub signature: u32,          // 0x43425355 "USBC"
-    pub tag: u32,                // Command block tag
+    pub signature: u32,            // 0x43425355 "USBC"
+    pub tag: u32,                  // Command block tag
     pub data_transfer_length: u32, // Number of bytes to transfer
-    pub flags: u8,               // Bit 7: Direction (0=Out, 1=In)
-    pub lun: u8,                 // Logical Unit Number
-    pub cb_length: u8,           // Command block length (1-16)
-    pub cb: [u8; 16],            // Command block
+    pub flags: u8,                 // Bit 7: Direction (0=Out, 1=In)
+    pub lun: u8,                   // Logical Unit Number
+    pub cb_length: u8,             // Command block length (1-16)
+    pub cb: [u8; 16],              // Command block
 }
 
 impl CommandBlockWrapper {
@@ -89,10 +89,10 @@ impl CommandBlockWrapper {
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy)]
 pub struct CommandStatusWrapper {
-    pub signature: u32,   // 0x53425355 "USBS"
-    pub tag: u32,         // Command block tag
+    pub signature: u32,    // 0x53425355 "USBS"
+    pub tag: u32,          // Command block tag
     pub data_residue: u32, // Difference between expected and actual data transfer
-    pub status: u8,       // Command status (0=passed, 1=failed, 2=phase error)
+    pub status: u8,        // Command status (0=passed, 1=failed, 2=phase error)
 }
 
 impl CommandStatusWrapper {
@@ -127,7 +127,11 @@ pub fn init() {
 }
 
 /// Register a mass storage device
-pub fn register_mass_storage_device(device_address: u8, subclass: u8, protocol: u8) -> Result<(), &'static str> {
+pub fn register_mass_storage_device(
+    device_address: u8,
+    subclass: u8,
+    protocol: u8,
+) -> Result<(), &'static str> {
     let _device = MassStorageDevice::new(device_address);
 
     rinux_kernel::printk::printk("  Mass Storage: Registered device (subclass: ");

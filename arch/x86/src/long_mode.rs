@@ -6,12 +6,12 @@ use core::arch::asm;
 
 /// CR0 control register flags
 pub mod cr0 {
-    pub const PE: u64 = 1 << 0;  // Protection Enable
-    pub const MP: u64 = 1 << 1;  // Monitor Coprocessor
-    pub const EM: u64 = 1 << 2;  // Emulation
-    pub const TS: u64 = 1 << 3;  // Task Switched
-    pub const ET: u64 = 1 << 4;  // Extension Type
-    pub const NE: u64 = 1 << 5;  // Numeric Error
+    pub const PE: u64 = 1 << 0; // Protection Enable
+    pub const MP: u64 = 1 << 1; // Monitor Coprocessor
+    pub const EM: u64 = 1 << 2; // Emulation
+    pub const TS: u64 = 1 << 3; // Task Switched
+    pub const ET: u64 = 1 << 4; // Extension Type
+    pub const NE: u64 = 1 << 5; // Numeric Error
     pub const WP: u64 = 1 << 16; // Write Protect
     pub const AM: u64 = 1 << 18; // Alignment Mask
     pub const NW: u64 = 1 << 29; // Not Write-through
@@ -21,8 +21,8 @@ pub mod cr0 {
 
 /// CR4 control register flags
 pub mod cr4 {
-    pub const PAE: u64 = 1 << 5;   // Physical Address Extension
-    pub const PGE: u64 = 1 << 7;   // Page Global Enable
+    pub const PAE: u64 = 1 << 5; // Physical Address Extension
+    pub const PGE: u64 = 1 << 7; // Page Global Enable
     pub const OSFXSR: u64 = 1 << 9; // OS FXSAVE/FXRSTOR support
     pub const OSXMMEXCPT: u64 = 1 << 10; // OS XMM exception support
     pub const OSXSAVE: u64 = 1 << 18; // OS XSAVE support
@@ -30,8 +30,8 @@ pub mod cr4 {
 
 /// EFER (Extended Feature Enable Register) flags
 pub mod efer {
-    pub const SCE: u64 = 1 << 0;  // System Call Extensions
-    pub const LME: u64 = 1 << 8;  // Long Mode Enable
+    pub const SCE: u64 = 1 << 0; // System Call Extensions
+    pub const LME: u64 = 1 << 8; // Long Mode Enable
     pub const LMA: u64 = 1 << 10; // Long Mode Active
     pub const NXE: u64 = 1 << 11; // No-Execute Enable
 }

@@ -84,26 +84,41 @@ mod tests {
     #[test]
     fn test_list_new() {
         let list: List<i32> = List::new();
+<<<<<<< copilot/increase-linux-coverage
         assert!(list.head.is_none());
         assert!(list.tail.is_none());
         assert_eq!(list.len(), 0);
         assert!(list.is_empty());
+=======
+        assert!(list.is_empty());
+        assert_eq!(list.len(), 0);
+        assert!(list.head.is_none());
+        assert!(list.tail.is_none());
+>>>>>>> master
     }
 
     #[test]
     fn test_list_default() {
         let list: List<i32> = List::default();
+<<<<<<< copilot/increase-linux-coverage
         assert!(list.head.is_none());
         assert!(list.tail.is_none());
         assert_eq!(list.len(), 0);
         assert!(list.is_empty());
+=======
+        assert!(list.is_empty());
+        assert_eq!(list.len(), 0);
+>>>>>>> master
     }
 
     #[test]
     fn test_list_is_empty() {
         let list: List<i32> = List::new();
         assert!(list.is_empty());
+<<<<<<< copilot/increase-linux-coverage
         assert_eq!(list.len(), 0);
+=======
+>>>>>>> master
     }
 
     #[test]
@@ -111,6 +126,7 @@ mod tests {
         let list: List<i32> = List::new();
         assert_eq!(list.len(), 0);
     }
+<<<<<<< copilot/increase-linux-coverage
 
     #[test]
     fn test_list_const_new() {
@@ -135,4 +151,6 @@ mod tests {
         assert!(list_u64.is_empty());
         assert!(list_str.is_empty());
     }
+=======
+>>>>>>> master
 }

@@ -33,7 +33,7 @@ pub fn init() {
 
     // Initialize APIC (or fall back to PIC)
     apic::init();
-    
+
     // Initialize interrupts
     interrupts::init();
 

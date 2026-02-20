@@ -2,33 +2,33 @@
 //!
 //! Support for local APIC and x2APIC modes.
 
-use core::ptr::{read_volatile, write_volatile};
 use crate::long_mode::{rdmsr, wrmsr};
+use core::ptr::{read_volatile, write_volatile};
 
 /// APIC register offsets
 pub mod reg {
     pub const ID: usize = 0x20;
     pub const VERSION: usize = 0x30;
-    pub const TPR: usize = 0x80;          // Task Priority Register
-    pub const APR: usize = 0x90;          // Arbitration Priority Register
-    pub const PPR: usize = 0xA0;          // Processor Priority Register
-    pub const EOI: usize = 0xB0;          // End of Interrupt
-    pub const RRD: usize = 0xC0;          // Remote Read Register
-    pub const LDR: usize = 0xD0;          // Logical Destination Register
-    pub const DFR: usize = 0xE0;          // Destination Format Register
-    pub const SPURIOUS: usize = 0xF0;     // Spurious Interrupt Vector Register
-    pub const ESR: usize = 0x280;         // Error Status Register
-    pub const ICR_LOW: usize = 0x300;     // Interrupt Command Register (low)
-    pub const ICR_HIGH: usize = 0x310;    // Interrupt Command Register (high)
-    pub const LVT_TIMER: usize = 0x320;   // LVT Timer Register
+    pub const TPR: usize = 0x80; // Task Priority Register
+    pub const APR: usize = 0x90; // Arbitration Priority Register
+    pub const PPR: usize = 0xA0; // Processor Priority Register
+    pub const EOI: usize = 0xB0; // End of Interrupt
+    pub const RRD: usize = 0xC0; // Remote Read Register
+    pub const LDR: usize = 0xD0; // Logical Destination Register
+    pub const DFR: usize = 0xE0; // Destination Format Register
+    pub const SPURIOUS: usize = 0xF0; // Spurious Interrupt Vector Register
+    pub const ESR: usize = 0x280; // Error Status Register
+    pub const ICR_LOW: usize = 0x300; // Interrupt Command Register (low)
+    pub const ICR_HIGH: usize = 0x310; // Interrupt Command Register (high)
+    pub const LVT_TIMER: usize = 0x320; // LVT Timer Register
     pub const LVT_THERMAL: usize = 0x330; // LVT Thermal Sensor Register
-    pub const LVT_PERF: usize = 0x340;    // LVT Performance Monitoring
-    pub const LVT_LINT0: usize = 0x350;   // LVT LINT0 Register
-    pub const LVT_LINT1: usize = 0x360;   // LVT LINT1 Register
-    pub const LVT_ERROR: usize = 0x370;   // LVT Error Register
-    pub const TIMER_INIT: usize = 0x380;  // Timer Initial Count
+    pub const LVT_PERF: usize = 0x340; // LVT Performance Monitoring
+    pub const LVT_LINT0: usize = 0x350; // LVT LINT0 Register
+    pub const LVT_LINT1: usize = 0x360; // LVT LINT1 Register
+    pub const LVT_ERROR: usize = 0x370; // LVT Error Register
+    pub const TIMER_INIT: usize = 0x380; // Timer Initial Count
     pub const TIMER_CURRENT: usize = 0x390; // Timer Current Count
-    pub const TIMER_DIV: usize = 0x3E0;   // Timer Divide Configuration
+    pub const TIMER_DIV: usize = 0x3E0; // Timer Divide Configuration
 }
 
 /// x2APIC MSR addresses

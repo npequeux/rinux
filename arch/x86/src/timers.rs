@@ -2,9 +2,9 @@
 //!
 //! Support for TSC (Time Stamp Counter) and HPET (High Precision Event Timer).
 
+use crate::long_mode::rdmsr;
 use core::arch::asm;
 use core::ptr::{read_volatile, write_volatile};
-use crate::long_mode::rdmsr;
 
 /// TSC frequency in Hz (calibrated at runtime)
 static mut TSC_FREQUENCY: u64 = 0;
@@ -80,7 +80,7 @@ pub fn has_rdtscp() -> bool {
 /// Get TSC frequency from CPUID (Intel only, may not be available)
 fn get_tsc_frequency_cpuid() -> Option<u64> {
     use crate::cpu::cpuid;
-    
+
     // Check if leaf 0x15 is available
     let (max_leaf, _, _, _) = cpuid(0);
     if max_leaf < 0x15 {
@@ -88,7 +88,7 @@ fn get_tsc_frequency_cpuid() -> Option<u64> {
     }
 
     let (eax, ebx, ecx, _) = cpuid(0x15);
-    
+
     if eax == 0 || ebx == 0 {
         return None;
     }
@@ -108,26 +108,26 @@ fn get_tsc_frequency_cpuid() -> Option<u64> {
 /// Calibrate TSC using PIT (Programmable Interval Timer)
 fn calibrate_tsc_pit() -> u64 {
     use crate::io::{inb, outb};
-    
+
     const PIT_FREQ: u64 = 1193182; // PIT frequency in Hz
     const CALIBRATION_MS: u64 = 50; // Calibrate for 50ms
-    
+
     // Calculate PIT ticks for calibration period
     let pit_ticks = (PIT_FREQ * CALIBRATION_MS) / 1000;
-    
+
     unsafe {
         // Program PIT channel 2 for one-shot mode
         outb(0x43, 0xB0); // Channel 2, mode 0
         outb(0x42, (pit_ticks & 0xFF) as u8);
         outb(0x42, ((pit_ticks >> 8) & 0xFF) as u8);
-        
+
         // Start PIT
         let gate = inb(0x61);
         outb(0x61, (gate & 0xFD) | 1);
-        
+
         // Read TSC before
         let tsc_start = rdtsc();
-        
+
         // Wait for PIT to complete
         loop {
             let status = inb(0x61);
@@ -135,10 +135,10 @@ fn calibrate_tsc_pit() -> u64 {
                 break;
             }
         }
-        
+
         // Read TSC after
         let tsc_end = rdtsc();
-        
+
         // Calculate frequency
         let tsc_ticks = tsc_end - tsc_start;
         (tsc_ticks * 1000) / CALIBRATION_MS
@@ -153,7 +153,7 @@ pub fn init_tsc() {
     }
 
     kernel::printk!("[TSC] Initializing Time Stamp Counter...\n");
-    
+
     // Try to get frequency from CPUID
     let freq = get_tsc_frequency_cpuid().unwrap_or_else(|| {
         kernel::printk!("[TSC] Calibrating using PIT...\n");
@@ -215,7 +215,7 @@ fn find_hpet_base() -> Option<u64> {
     // TODO: Parse ACPI HPET table
     // For now, try the common address
     let common_addr = 0xFED00000u64;
-    
+
     // Verify HPET is present by reading capabilities
     unsafe {
         let caps = read_volatile(common_addr as *const u64);
@@ -223,7 +223,7 @@ fn find_hpet_base() -> Option<u64> {
             return Some(common_addr);
         }
     }
-    
+
     None
 }
 
@@ -247,27 +247,30 @@ pub fn read_hpet_counter() -> u64 {
 /// Initialize HPET
 pub fn init_hpet() {
     kernel::printk!("[HPET] Searching for High Precision Event Timer...\n");
-    
+
     if let Some(base) = find_hpet_base() {
         unsafe {
             HPET_BASE = Some(base);
-            
+
             // Read capabilities
             let caps = read_hpet(hpet_reg::GENERAL_CAPS);
             let vendor_id = (caps >> 16) & 0xFFFF;
             let num_timers = ((caps >> 8) & 0x1F) + 1;
             let period = caps >> 32;
-            
+
             kernel::printk!("[HPET] Found at {:#x}\n", base);
             kernel::printk!("[HPET] Vendor ID: {:#x}\n", vendor_id);
             kernel::printk!("[HPET] Timers: {}\n", num_timers);
             kernel::printk!("[HPET] Period: {} fs\n", period);
-            kernel::printk!("[HPET] Frequency: {} Hz\n", 1_000_000_000_000_000u64 / period);
-            
+            kernel::printk!(
+                "[HPET] Frequency: {} Hz\n",
+                1_000_000_000_000_000u64 / period
+            );
+
             // Enable HPET
             let config = read_hpet(hpet_reg::GENERAL_CONFIG);
             write_hpet(hpet_reg::GENERAL_CONFIG, config | 1);
-            
+
             kernel::printk!("[HPET] Enabled\n");
         }
     } else {

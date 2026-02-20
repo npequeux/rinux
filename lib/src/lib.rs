@@ -30,6 +30,7 @@ mod tests {
 
     #[test]
     fn test_version_string() {
+<<<<<<< copilot/increase-linux-coverage
         let version = version_string();
         assert_eq!(version, "Rinux 0.1.0");
         assert!(version.starts_with("Rinux"));
@@ -42,5 +43,8 @@ mod tests {
         let v1 = version_string();
         let v2 = version_string();
         assert_eq!(v1, v2);
+=======
+        assert_eq!(version_string(), "Rinux 0.1.0");
+>>>>>>> master
     }
 }

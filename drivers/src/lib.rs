@@ -4,16 +4,16 @@
 
 #![no_std]
 
-pub mod serial;
-pub mod keyboard;
-pub mod vga;
-pub mod pci;
-pub mod usb;
-pub mod graphics;
 pub mod acpi;
-pub mod touchpad;
-pub mod power;
 pub mod audio;
+pub mod graphics;
+pub mod keyboard;
+pub mod pci;
+pub mod power;
+pub mod serial;
+pub mod touchpad;
+pub mod usb;
+pub mod vga;
 
 /// Initialize all drivers
 pub fn init() {

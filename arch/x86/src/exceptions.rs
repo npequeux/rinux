@@ -133,7 +133,7 @@ pub extern "x86-interrupt" fn page_fault_handler(
     error_code: u64,
 ) {
     use crate::long_mode::read_cr2;
-    
+
     let cr2 = read_cr2();
     kernel::printk!("\n[EXCEPTION] Page Fault (#PF)\n");
     kernel::printk!("Error Code: {:#x}\n", error_code);

@@ -33,6 +33,7 @@ mod tests {
 
     #[test]
     fn test_div_round_up() {
+<<<<<<< copilot/increase-linux-coverage
         assert_eq!(div_round_up(0, 4), 0);
         assert_eq!(div_round_up(1, 4), 1);
         assert_eq!(div_round_up(4, 4), 1);
@@ -43,10 +44,18 @@ mod tests {
         assert_eq!(div_round_up(1024, 4096), 1);
         assert_eq!(div_round_up(4096, 4096), 1);
         assert_eq!(div_round_up(4097, 4096), 2);
+=======
+        assert_eq!(div_round_up(10, 3), 4);
+        assert_eq!(div_round_up(9, 3), 3);
+        assert_eq!(div_round_up(0, 1), 0);
+        assert_eq!(div_round_up(1, 1), 1);
+        assert_eq!(div_round_up(7, 4), 2);
+>>>>>>> master
     }
 
     #[test]
     fn test_align_up() {
+<<<<<<< copilot/increase-linux-coverage
         // Test alignment to 4
         assert_eq!(align_up(0, 4), 0);
         assert_eq!(align_up(1, 4), 4);
@@ -67,20 +76,34 @@ mod tests {
         assert_eq!(align_up(1, 4096), 4096);
         assert_eq!(align_up(4095, 4096), 4096);
         assert_eq!(align_up(4096, 4096), 4096);
+=======
+        assert_eq!(align_up(0, 4), 0);
+        assert_eq!(align_up(1, 4), 4);
+        assert_eq!(align_up(3, 4), 4);
+        assert_eq!(align_up(4, 4), 4);
+        assert_eq!(align_up(5, 4), 8);
+        assert_eq!(align_up(1000, 4096), 4096);
+>>>>>>> master
         assert_eq!(align_up(4097, 4096), 8192);
     }
 
     #[test]
     fn test_align_down() {
+<<<<<<< copilot/increase-linux-coverage
         // Test alignment to 4
         assert_eq!(align_down(0, 4), 0);
         assert_eq!(align_down(1, 4), 0);
         assert_eq!(align_down(2, 4), 0);
+=======
+        assert_eq!(align_down(0, 4), 0);
+        assert_eq!(align_down(1, 4), 0);
+>>>>>>> master
         assert_eq!(align_down(3, 4), 0);
         assert_eq!(align_down(4, 4), 4);
         assert_eq!(align_down(5, 4), 4);
         assert_eq!(align_down(7, 4), 4);
         assert_eq!(align_down(8, 4), 8);
+<<<<<<< copilot/increase-linux-coverage
         
         // Test alignment to 8
         assert_eq!(align_down(0, 8), 0);
@@ -95,10 +118,13 @@ mod tests {
         assert_eq!(align_down(4096, 4096), 4096);
         assert_eq!(align_down(8191, 4096), 4096);
         assert_eq!(align_down(8192, 4096), 8192);
+=======
+>>>>>>> master
     }
 
     #[test]
     fn test_is_aligned() {
+<<<<<<< copilot/increase-linux-coverage
         // Test alignment to 4
         assert!(is_aligned(0, 4));
         assert!(!is_aligned(1, 4));
@@ -123,10 +149,20 @@ mod tests {
         assert!(is_aligned(4096, 4096));
         assert!(!is_aligned(4097, 4096));
         assert!(is_aligned(8192, 4096));
+=======
+        assert!(is_aligned(0, 4));
+        assert!(!is_aligned(1, 4));
+        assert!(is_aligned(4, 4));
+        assert!(!is_aligned(5, 4));
+        assert!(is_aligned(8, 4));
+        assert!(is_aligned(4096, 4096));
+        assert!(!is_aligned(4097, 4096));
+>>>>>>> master
     }
 
     #[test]
     fn test_is_power_of_2() {
+<<<<<<< copilot/increase-linux-coverage
         // Test zero and one
         assert!(!is_power_of_2(0));
         assert!(is_power_of_2(1));
@@ -154,5 +190,18 @@ mod tests {
         assert!(!is_power_of_2(100));
         assert!(!is_power_of_2(1000));
         assert!(!is_power_of_2(4095));
+=======
+        assert!(!is_power_of_2(0));
+        assert!(is_power_of_2(1));
+        assert!(is_power_of_2(2));
+        assert!(!is_power_of_2(3));
+        assert!(is_power_of_2(4));
+        assert!(!is_power_of_2(5));
+        assert!(!is_power_of_2(6));
+        assert!(!is_power_of_2(7));
+        assert!(is_power_of_2(8));
+        assert!(is_power_of_2(1024));
+        assert!(!is_power_of_2(1023));
+>>>>>>> master
     }
 }
