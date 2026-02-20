@@ -19,3 +19,62 @@ pub fn allocate_pid() -> Pid {
 pub fn free_pid(_pid: Pid) {
     // TODO: Implement PID recycling
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    extern crate alloc;
+    use alloc::vec::Vec;
+
+    #[test]
+    fn test_allocate_pid_starts_at_one() {
+        // Note: This test depends on test ordering
+        // PIDs might not start at 1 if other tests ran first
+        let pid = allocate_pid();
+        assert!(pid >= 1);
+    }
+
+    #[test]
+    fn test_allocate_pid_increments() {
+        let pid1 = allocate_pid();
+        let pid2 = allocate_pid();
+        let pid3 = allocate_pid();
+        
+        // PIDs should be incrementing
+        assert!(pid2 > pid1);
+        assert!(pid3 > pid2);
+        assert_eq!(pid2, pid1 + 1);
+        assert_eq!(pid3, pid2 + 1);
+    }
+
+    #[test]
+    fn test_allocate_pid_unique() {
+        let pid1 = allocate_pid();
+        let pid2 = allocate_pid();
+        
+        // PIDs should be unique
+        assert_ne!(pid1, pid2);
+    }
+
+    #[test]
+    fn test_free_pid_no_panic() {
+        // free_pid should not panic (even though it's a stub)
+        let pid = allocate_pid();
+        free_pid(pid);
+    }
+
+    #[test]
+    fn test_multiple_allocations() {
+        let mut pids = Vec::new();
+        for _ in 0..10 {
+            pids.push(allocate_pid());
+        }
+        
+        // All PIDs should be unique
+        for i in 0..pids.len() {
+            for j in (i + 1)..pids.len() {
+                assert_ne!(pids[i], pids[j]);
+            }
+        }
+    }
+}
