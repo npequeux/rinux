@@ -365,23 +365,155 @@ pub fn init() {
     unsafe {
         PCI_SCANNER.scan();
 
+        let device_count = PCI_SCANNER.device_count();
+        
+        // Print device count
         rinux_kernel::printk::printk("PCI: Found ");
-        // TODO: Print number
-        rinux_kernel::printk::printk(" devices\n");
+        print_number(device_count);
+        rinux_kernel::printk::printk(" device");
+        if device_count != 1 {
+            rinux_kernel::printk::printk("s");
+        }
+        rinux_kernel::printk::printk("\n");
 
-        // Print USB controllers
-        for device in PCI_SCANNER.find_usb_controllers() {
-            rinux_kernel::printk::printk("  USB Controller: ");
-            if let Some(ctrl_type) = device.usb_controller_type() {
-                match ctrl_type {
-                    UsbControllerType::UHCI => rinux_kernel::printk::printk("UHCI (USB 1.1)"),
-                    UsbControllerType::OHCI => rinux_kernel::printk::printk("OHCI (USB 1.1)"),
-                    UsbControllerType::EHCI => rinux_kernel::printk::printk("EHCI (USB 2.0)"),
-                    UsbControllerType::XHCI => rinux_kernel::printk::printk("XHCI (USB 3.0+)"),
+        // Print all detected devices
+        if device_count > 0 {
+            rinux_kernel::printk::printk("\nPCI Devices:\n");
+            for i in 0..device_count {
+                if let Some(device) = PCI_SCANNER.get_device(i) {
+                    print_device_info(device);
                 }
             }
-            rinux_kernel::printk::printk("\n");
         }
+    }
+}
+
+/// Helper function to print a number
+fn print_number(n: usize) {
+    if n == 0 {
+        rinux_kernel::printk::printk("0");
+        return;
+    }
+    
+    // Convert number to string manually (no std available)
+    let mut digits = [0u8; 20];
+    let mut num = n;
+    let mut count = 0;
+    
+    while num > 0 {
+        digits[count] = (num % 10) as u8 + b'0';
+        num /= 10;
+        count += 1;
+    }
+    
+    // Print digits in reverse order
+    for i in (0..count).rev() {
+        let ch = digits[i] as char;
+        rinux_kernel::printk::printk(match ch {
+            '0' => "0", '1' => "1", '2' => "2", '3' => "3", '4' => "4",
+            '5' => "5", '6' => "6", '7' => "7", '8' => "8", '9' => "9",
+            _ => "?",
+        });
+    }
+}
+
+/// Helper function to print a hexadecimal number (4 digits)
+fn print_hex_u16(n: u16) {
+    let digits = "0123456789abcdef";
+    let hex_digits = [
+        digits.as_bytes()[(n >> 12) as usize] as char,
+        digits.as_bytes()[((n >> 8) & 0xF) as usize] as char,
+        digits.as_bytes()[((n >> 4) & 0xF) as usize] as char,
+        digits.as_bytes()[(n & 0xF) as usize] as char,
+    ];
+    
+    for digit in hex_digits.iter() {
+        rinux_kernel::printk::printk(match digit {
+            '0' => "0", '1' => "1", '2' => "2", '3' => "3", '4' => "4",
+            '5' => "5", '6' => "6", '7' => "7", '8' => "8", '9' => "9",
+            'a' => "a", 'b' => "b", 'c' => "c", 'd' => "d", 'e' => "e", 'f' => "f",
+            _ => "?",
+        });
+    }
+}
+
+/// Helper function to print a hexadecimal number (2 digits)
+fn print_hex_u8(n: u8) {
+    let digits = "0123456789abcdef";
+    let hex_digits = [
+        digits.as_bytes()[(n >> 4) as usize] as char,
+        digits.as_bytes()[(n & 0xF) as usize] as char,
+    ];
+    
+    for digit in hex_digits.iter() {
+        rinux_kernel::printk::printk(match digit {
+            '0' => "0", '1' => "1", '2' => "2", '3' => "3", '4' => "4",
+            '5' => "5", '6' => "6", '7' => "7", '8' => "8", '9' => "9",
+            'a' => "a", 'b' => "b", 'c' => "c", 'd' => "d", 'e' => "e", 'f' => "f",
+            _ => "?",
+        });
+    }
+}
+
+/// Print detailed information about a PCI device
+fn print_device_info(device: &PciDevice) {
+    // Print address (bus:device.function)
+    rinux_kernel::printk::printk("  ");
+    print_hex_u8(device.address.bus);
+    rinux_kernel::printk::printk(":");
+    print_hex_u8(device.address.device);
+    rinux_kernel::printk::printk(".");
+    print_number(device.address.function as usize);
+    
+    // Print vendor:device ID
+    rinux_kernel::printk::printk(" [");
+    print_hex_u16(device.vendor_id);
+    rinux_kernel::printk::printk(":");
+    print_hex_u16(device.device_id);
+    rinux_kernel::printk::printk("] ");
+    
+    // Print device class description
+    print_device_class(device);
+    
+    // Print special information for known device types
+    if device.is_usb_controller() {
+        if let Some(ctrl_type) = device.usb_controller_type() {
+            rinux_kernel::printk::printk(" (");
+            match ctrl_type {
+                UsbControllerType::UHCI => rinux_kernel::printk::printk("UHCI/USB 1.1"),
+                UsbControllerType::OHCI => rinux_kernel::printk::printk("OHCI/USB 1.1"),
+                UsbControllerType::EHCI => rinux_kernel::printk::printk("EHCI/USB 2.0"),
+                UsbControllerType::XHCI => rinux_kernel::printk::printk("XHCI/USB 3.0+"),
+            }
+            rinux_kernel::printk::printk(")");
+        }
+    }
+    
+    rinux_kernel::printk::printk("\n");
+}
+
+/// Print device class description
+fn print_device_class(device: &PciDevice) {
+    match device.class {
+        PciClass::Unclassified => rinux_kernel::printk::printk("Unclassified"),
+        PciClass::MassStorageController => rinux_kernel::printk::printk("Mass Storage Controller"),
+        PciClass::NetworkController => rinux_kernel::printk::printk("Network Controller"),
+        PciClass::DisplayController => rinux_kernel::printk::printk("Display Controller"),
+        PciClass::MultimediaController => rinux_kernel::printk::printk("Multimedia Controller"),
+        PciClass::MemoryController => rinux_kernel::printk::printk("Memory Controller"),
+        PciClass::BridgeDevice => rinux_kernel::printk::printk("Bridge Device"),
+        PciClass::SimpleCommunicationController => rinux_kernel::printk::printk("Communication Controller"),
+        PciClass::BaseSystemPeripheral => rinux_kernel::printk::printk("System Peripheral"),
+        PciClass::InputDevice => rinux_kernel::printk::printk("Input Device"),
+        PciClass::DockingStation => rinux_kernel::printk::printk("Docking Station"),
+        PciClass::Processor => rinux_kernel::printk::printk("Processor"),
+        PciClass::SerialBusController => rinux_kernel::printk::printk("Serial Bus Controller"),
+        PciClass::WirelessController => rinux_kernel::printk::printk("Wireless Controller"),
+        PciClass::IntelligentController => rinux_kernel::printk::printk("Intelligent Controller"),
+        PciClass::SatelliteController => rinux_kernel::printk::printk("Satellite Controller"),
+        PciClass::EncryptionController => rinux_kernel::printk::printk("Encryption Controller"),
+        PciClass::SignalProcessingController => rinux_kernel::printk::printk("Signal Processing Controller"),
+        PciClass::Other => rinux_kernel::printk::printk("Other"),
     }
 }
 
