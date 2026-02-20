@@ -5,7 +5,9 @@
 /// Multiboot header constants
 const MULTIBOOT_MAGIC: u32 = 0x1BADB002;
 const MULTIBOOT_FLAGS: u32 = 0x00000003;
-const MULTIBOOT_CHECKSUM: u32 = 0u32.wrapping_sub(MULTIBOOT_MAGIC).wrapping_sub(MULTIBOOT_FLAGS);
+const MULTIBOOT_CHECKSUM: u32 = 0u32
+    .wrapping_sub(MULTIBOOT_MAGIC)
+    .wrapping_sub(MULTIBOOT_FLAGS);
 
 /// Multiboot header
 #[repr(C, align(4))]
@@ -28,7 +30,7 @@ const STACK_SIZE: usize = 16384;
 
 /// Boot stack
 #[repr(align(16))]
-struct BootStack([u8; STACK_SIZE]);
+struct BootStack(#[allow(dead_code)] [u8; STACK_SIZE]);
 
 #[used]
 static mut BOOT_STACK: BootStack = BootStack([0; STACK_SIZE]);

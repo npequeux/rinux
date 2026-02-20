@@ -21,13 +21,13 @@ pub fn init() {
     if MM_INITIALIZED.load(Ordering::Acquire) {
         return;
     }
-    
+
     // Initialize frame allocator
     frame::init();
-    
+
     // Initialize heap allocator
     heap::init();
-    
+
     MM_INITIALIZED.store(true, Ordering::Release);
 }
 

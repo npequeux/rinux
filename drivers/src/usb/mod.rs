@@ -9,10 +9,10 @@ use core::fmt;
 /// USB device speed
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UsbSpeed {
-    Low,    // 1.5 Mbps (USB 1.0)
-    Full,   // 12 Mbps (USB 1.1)
-    High,   // 480 Mbps (USB 2.0)
-    Super,  // 5 Gbps (USB 3.0)
+    Low,       // 1.5 Mbps (USB 1.0)
+    Full,      // 12 Mbps (USB 1.1)
+    High,      // 480 Mbps (USB 2.0)
+    Super,     // 5 Gbps (USB 3.0)
     SuperPlus, // 10 Gbps (USB 3.1)
 }
 
@@ -143,6 +143,12 @@ pub struct UsbDevice {
     pub protocol: u8,
 }
 
+impl Default for UsbDevice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UsbDevice {
     pub const fn new() -> Self {
         Self {
@@ -161,19 +167,19 @@ impl UsbDevice {
 pub trait UsbHostController {
     /// Initialize the controller
     fn init(&mut self) -> Result<(), &'static str>;
-    
+
     /// Reset the controller
     fn reset(&mut self) -> Result<(), &'static str>;
-    
+
     /// Get the number of ports
     fn port_count(&self) -> u8;
-    
+
     /// Check if a port has a device connected
     fn port_connected(&self, port: u8) -> bool;
-    
+
     /// Reset a port
     fn reset_port(&mut self, port: u8) -> Result<(), &'static str>;
-    
+
     /// Enumerate devices on all ports
     fn enumerate_devices(&mut self) -> usize;
 }
@@ -181,10 +187,10 @@ pub trait UsbHostController {
 /// Initialize USB subsystem
 pub fn init() {
     rinux_kernel::printk::printk("Initializing USB subsystem...\n");
-    
+
     // Find all USB controllers via PCI
     let scanner = crate::pci::scanner();
-    
+
     for device in scanner.find_usb_controllers() {
         if let Some(ctrl_type) = device.usb_controller_type() {
             rinux_kernel::printk::printk("  Found ");

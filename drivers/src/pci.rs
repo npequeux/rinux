@@ -71,7 +71,11 @@ pub struct PciAddress {
 
 impl PciAddress {
     pub const fn new(bus: u8, device: u8, function: u8) -> Self {
-        Self { bus, device, function }
+        Self {
+            bus,
+            device,
+            function,
+        }
     }
 
     /// Build the address for PCI configuration space access
@@ -80,7 +84,7 @@ impl PciAddress {
         let device = self.device as u32;
         let function = self.function as u32;
         let offset = (offset & 0xFC) as u32;
-        
+
         0x8000_0000 | (bus << 16) | (device << 11) | (function << 8) | offset
     }
 }
@@ -253,8 +257,8 @@ pub fn read_device_info(address: PciAddress) -> Option<PciDevice> {
 
     // Read BARs
     let mut bars = [0u32; 6];
-    for i in 0..6 {
-        bars[i] = pci_config_read(address, 0x10 + (i as u8 * 4));
+    for (i, bar) in bars.iter_mut().enumerate() {
+        *bar = pci_config_read(address, 0x10 + (i as u8 * 4));
     }
 
     Some(PciDevice {
@@ -276,6 +280,12 @@ pub struct PciScanner {
     count: usize,
 }
 
+impl Default for PciScanner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PciScanner {
     pub const fn new() -> Self {
         Self {
@@ -293,7 +303,7 @@ impl PciScanner {
             for device in 0..32u8 {
                 for function in 0..8u8 {
                     let address = PciAddress::new(bus, device, function);
-                    
+
                     if let Some(dev_info) = read_device_info(address) {
                         if self.count < 256 {
                             self.devices[self.count] = Some(dev_info);
@@ -350,10 +360,11 @@ static mut PCI_SCANNER: PciScanner = PciScanner::new();
 /// Initialize PCI subsystem
 pub fn init() {
     rinux_kernel::printk::printk("Initializing PCI subsystem...\n");
-    
+
+    #[allow(static_mut_refs)]
     unsafe {
         PCI_SCANNER.scan();
-        
+
         rinux_kernel::printk::printk("PCI: Found ");
         // TODO: Print number
         rinux_kernel::printk::printk(" devices\n");
@@ -375,11 +386,17 @@ pub fn init() {
 }
 
 /// Get a reference to the PCI scanner
+#[allow(static_mut_refs)]
 pub fn scanner() -> &'static PciScanner {
     unsafe { &PCI_SCANNER }
 }
 
 /// Get a mutable reference to the PCI scanner
+///
+/// # Safety
+///
+/// The caller must ensure that there are no other active references to the PCI scanner.
+#[allow(static_mut_refs)]
 pub unsafe fn scanner_mut() -> &'static mut PciScanner {
     &mut PCI_SCANNER
 }

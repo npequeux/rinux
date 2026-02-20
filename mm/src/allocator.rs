@@ -19,6 +19,12 @@ pub struct BumpAllocator {
     next: usize,
 }
 
+impl Default for BumpAllocator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BumpAllocator {
     pub const fn new() -> Self {
         BumpAllocator {
@@ -27,7 +33,12 @@ impl BumpAllocator {
             next: HEAP_START,
         }
     }
-    
+
+    /// Initialize the allocator with custom heap region
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the specified heap region is valid and not in use.
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.heap_start = heap_start;
         self.heap_end = heap_start + heap_size;
@@ -46,10 +57,10 @@ struct LockedAllocator(Mutex<BumpAllocator>);
 unsafe impl GlobalAlloc for LockedAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let mut allocator = self.0.lock();
-        
+
         let alloc_start = align_up(allocator.next, layout.align());
         let alloc_end = alloc_start.saturating_add(layout.size());
-        
+
         if alloc_end > allocator.heap_end {
             null_mut()
         } else {
@@ -57,7 +68,7 @@ unsafe impl GlobalAlloc for LockedAllocator {
             alloc_start as *mut u8
         }
     }
-    
+
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
         // Bump allocator doesn't support deallocation
     }

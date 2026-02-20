@@ -5,6 +5,10 @@
 use core::arch::asm;
 
 /// Read a byte from a port
+///
+/// # Safety
+///
+/// The caller must ensure that the port is valid and safe to read from.
 #[inline(always)]
 pub unsafe fn inb(port: u16) -> u8 {
     let value: u8;
@@ -18,6 +22,10 @@ pub unsafe fn inb(port: u16) -> u8 {
 }
 
 /// Write a byte to a port
+///
+/// # Safety
+///
+/// The caller must ensure that the port is valid and safe to write to.
 #[inline(always)]
 pub unsafe fn outb(port: u16, value: u8) {
     asm!(
@@ -29,6 +37,10 @@ pub unsafe fn outb(port: u16, value: u8) {
 }
 
 /// Read a word from a port
+///
+/// # Safety
+///
+/// The caller must ensure that the port is valid and safe to read from.
 #[inline(always)]
 pub unsafe fn inw(port: u16) -> u16 {
     let value: u16;
@@ -42,6 +54,10 @@ pub unsafe fn inw(port: u16) -> u16 {
 }
 
 /// Write a word to a port
+///
+/// # Safety
+///
+/// The caller must ensure that the port is valid and safe to write to.
 #[inline(always)]
 pub unsafe fn outw(port: u16, value: u16) {
     asm!(
@@ -53,6 +69,10 @@ pub unsafe fn outw(port: u16, value: u16) {
 }
 
 /// Read a dword from a port
+///
+/// # Safety
+///
+/// The caller must ensure that the port is valid and safe to read from.
 #[inline(always)]
 pub unsafe fn inl(port: u16) -> u32 {
     let value: u32;
@@ -66,6 +86,10 @@ pub unsafe fn inl(port: u16) -> u32 {
 }
 
 /// Write a dword to a port
+///
+/// # Safety
+///
+/// The caller must ensure that the port is valid and safe to write to.
 #[inline(always)]
 pub unsafe fn outl(port: u16, value: u32) {
     asm!(
@@ -77,6 +101,10 @@ pub unsafe fn outl(port: u16, value: u32) {
 }
 
 /// Wait for I/O operation to complete
+///
+/// # Safety
+///
+/// This function performs an I/O write operation to port 0x80.
 #[inline(always)]
 pub unsafe fn io_wait() {
     outb(0x80, 0);

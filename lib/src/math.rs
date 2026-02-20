@@ -4,7 +4,7 @@
 
 /// Divide and round up
 pub const fn div_round_up(n: usize, d: usize) -> usize {
-    (n + d - 1) / d
+    n.div_ceil(d)
 }
 
 /// Align up to power of 2

@@ -4,11 +4,11 @@
 
 #![no_std]
 
-pub mod printk;
 pub mod init;
 pub mod panic;
-pub mod types;
+pub mod printk;
 pub mod process;
+pub mod types;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -20,12 +20,12 @@ pub fn init() {
         printk::printk("Warning: Kernel already initialized\n");
         return;
     }
-    
+
     printk::printk("Initializing kernel subsystems...\n");
-    
+
     // Initialize subsystems
     init::early_init();
-    
+
     KERNEL_INITIALIZED.store(true, Ordering::Release);
     printk::printk("Kernel subsystems initialized\n");
 }

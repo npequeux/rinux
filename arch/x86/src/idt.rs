@@ -30,7 +30,7 @@ impl IdtEntry {
             zero: 0,
         }
     }
-    
+
     fn new(handler: u64, selector: u16, type_attr: u8) -> Self {
         IdtEntry {
             offset_low: (handler & 0xFFFF) as u16,
@@ -63,11 +63,11 @@ impl Idt {
             entries: [IdtEntry::null(); 256],
         }
     }
-    
+
     fn set_handler(&mut self, index: u8, handler: u64) {
         self.entries[index as usize] = IdtEntry::new(handler, 0x08, 0x8E);
     }
-    
+
     fn pointer(&self) -> IdtPointer {
         IdtPointer {
             limit: (core::mem::size_of::<Self>() - 1) as u16,
@@ -81,30 +81,36 @@ static IDT: Mutex<Idt> = Mutex::new(Idt::new());
 /// Initialize IDT
 pub fn init() {
     let mut idt = IDT.lock();
-    
+
     // Set up exception handlers
-    idt.set_handler(0, divide_by_zero_handler as u64);
-    idt.set_handler(1, debug_handler as u64);
-    idt.set_handler(2, nmi_handler as u64);
-    idt.set_handler(3, breakpoint_handler as u64);
-    idt.set_handler(4, overflow_handler as u64);
-    idt.set_handler(5, bound_range_exceeded_handler as u64);
-    idt.set_handler(6, invalid_opcode_handler as u64);
-    idt.set_handler(7, device_not_available_handler as u64);
-    idt.set_handler(8, double_fault_handler as u64);
-    idt.set_handler(10, invalid_tss_handler as u64);
-    idt.set_handler(11, segment_not_present_handler as u64);
-    idt.set_handler(12, stack_segment_fault_handler as u64);
-    idt.set_handler(13, general_protection_fault_handler as u64);
-    idt.set_handler(14, page_fault_handler as u64);
-    idt.set_handler(16, fpu_fault_handler as u64);
-    idt.set_handler(17, alignment_check_handler as u64);
-    idt.set_handler(18, machine_check_handler as u64);
-    idt.set_handler(19, simd_exception_handler as u64);
-    idt.set_handler(20, virtualization_exception_handler as u64);
-    
+    idt.set_handler(0, divide_by_zero_handler as *const () as usize as u64);
+    idt.set_handler(1, debug_handler as *const () as usize as u64);
+    idt.set_handler(2, nmi_handler as *const () as usize as u64);
+    idt.set_handler(3, breakpoint_handler as *const () as usize as u64);
+    idt.set_handler(4, overflow_handler as *const () as usize as u64);
+    idt.set_handler(5, bound_range_exceeded_handler as *const () as usize as u64);
+    idt.set_handler(6, invalid_opcode_handler as *const () as usize as u64);
+    idt.set_handler(7, device_not_available_handler as *const () as usize as u64);
+    idt.set_handler(8, double_fault_handler as *const () as usize as u64);
+    idt.set_handler(10, invalid_tss_handler as *const () as usize as u64);
+    idt.set_handler(11, segment_not_present_handler as *const () as usize as u64);
+    idt.set_handler(12, stack_segment_fault_handler as *const () as usize as u64);
+    idt.set_handler(
+        13,
+        general_protection_fault_handler as *const () as usize as u64,
+    );
+    idt.set_handler(14, page_fault_handler as *const () as usize as u64);
+    idt.set_handler(16, fpu_fault_handler as *const () as usize as u64);
+    idt.set_handler(17, alignment_check_handler as *const () as usize as u64);
+    idt.set_handler(18, machine_check_handler as *const () as usize as u64);
+    idt.set_handler(19, simd_exception_handler as *const () as usize as u64);
+    idt.set_handler(
+        20,
+        virtualization_exception_handler as *const () as usize as u64,
+    );
+
     let pointer = idt.pointer();
-    
+
     unsafe {
         asm!(
             "lidt [{}]",
@@ -115,9 +121,11 @@ pub fn init() {
 }
 
 // Exception handler type for handlers without error code
+#[allow(dead_code)]
 type HandlerFunc = extern "x86-interrupt" fn(InterruptStackFrame);
 
-// Exception handler type for handlers with error code  
+// Exception handler type for handlers with error code
+#[allow(dead_code)]
 type HandlerFuncWithErrCode = extern "x86-interrupt" fn(InterruptStackFrame, error_code: u64);
 
 /// Interrupt stack frame
@@ -163,7 +171,10 @@ extern "x86-interrupt" fn device_not_available_handler(_stack_frame: InterruptSt
     panic!("EXCEPTION: Device not available");
 }
 
-extern "x86-interrupt" fn double_fault_handler(_stack_frame: InterruptStackFrame, _error_code: u64) -> ! {
+extern "x86-interrupt" fn double_fault_handler(
+    _stack_frame: InterruptStackFrame,
+    _error_code: u64,
+) -> ! {
     panic!("EXCEPTION: Double fault");
 }
 
@@ -171,15 +182,24 @@ extern "x86-interrupt" fn invalid_tss_handler(_stack_frame: InterruptStackFrame,
     panic!("EXCEPTION: Invalid TSS");
 }
 
-extern "x86-interrupt" fn segment_not_present_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
+extern "x86-interrupt" fn segment_not_present_handler(
+    _stack_frame: InterruptStackFrame,
+    _error_code: u64,
+) {
     panic!("EXCEPTION: Segment not present");
 }
 
-extern "x86-interrupt" fn stack_segment_fault_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
+extern "x86-interrupt" fn stack_segment_fault_handler(
+    _stack_frame: InterruptStackFrame,
+    _error_code: u64,
+) {
     panic!("EXCEPTION: Stack segment fault");
 }
 
-extern "x86-interrupt" fn general_protection_fault_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
+extern "x86-interrupt" fn general_protection_fault_handler(
+    _stack_frame: InterruptStackFrame,
+    _error_code: u64,
+) {
     panic!("EXCEPTION: General protection fault");
 }
 
@@ -191,7 +211,10 @@ extern "x86-interrupt" fn fpu_fault_handler(_stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: FPU fault");
 }
 
-extern "x86-interrupt" fn alignment_check_handler(_stack_frame: InterruptStackFrame, _error_code: u64) {
+extern "x86-interrupt" fn alignment_check_handler(
+    _stack_frame: InterruptStackFrame,
+    _error_code: u64,
+) {
     panic!("EXCEPTION: Alignment check");
 }
 

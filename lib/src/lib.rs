@@ -4,9 +4,9 @@
 
 #![no_std]
 
+pub mod list;
 pub mod math;
 pub mod string;
-pub mod list;
 
 /// Version information
 pub const VERSION_MAJOR: u32 = 0;

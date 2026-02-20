@@ -4,8 +4,8 @@
 
 use core::arch::asm;
 
-/// Page table entry flags
 bitflags::bitflags! {
+    /// Page table entry flags
     pub struct PageTableFlags: u64 {
         const PRESENT        = 1 << 0;
         const WRITABLE       = 1 << 1;
@@ -25,23 +25,29 @@ bitflags::bitflags! {
 #[repr(transparent)]
 pub struct PageTableEntry(u64);
 
+impl Default for PageTableEntry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PageTableEntry {
     pub const fn new() -> Self {
         PageTableEntry(0)
     }
-    
+
     pub fn is_present(&self) -> bool {
         self.flags().contains(PageTableFlags::PRESENT)
     }
-    
+
     pub fn flags(&self) -> PageTableFlags {
         PageTableFlags::from_bits_truncate(self.0)
     }
-    
+
     pub fn addr(&self) -> u64 {
         self.0 & 0x000F_FFFF_FFFF_F000
     }
-    
+
     pub fn set(&mut self, addr: u64, flags: PageTableFlags) {
         self.0 = (addr & 0x000F_FFFF_FFFF_F000) | flags.bits();
     }
@@ -53,13 +59,19 @@ pub struct PageTable {
     entries: [PageTableEntry; 512],
 }
 
+impl Default for PageTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PageTable {
     pub const fn new() -> Self {
         PageTable {
             entries: [PageTableEntry::new(); 512],
         }
     }
-    
+
     pub fn zero(&mut self) {
         for entry in self.entries.iter_mut() {
             *entry = PageTableEntry::new();
@@ -77,6 +89,10 @@ pub fn read_cr3() -> u64 {
 }
 
 /// Set CR3 (page table register)
+///
+/// # Safety
+///
+/// The caller must ensure that the value is a valid physical address of a page table.
 pub unsafe fn write_cr3(value: u64) {
     asm!("mov cr3, {}", in(reg) value, options(nostack));
 }
