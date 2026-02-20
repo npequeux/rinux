@@ -30,6 +30,17 @@ mod tests {
 
     #[test]
     fn test_version_string() {
-        assert_eq!(version_string(), "Rinux 0.1.0");
+        let version = version_string();
+        assert_eq!(version, "Rinux 0.1.0");
+        assert!(version.starts_with("Rinux"));
+        assert!(version.contains("0.1.0"));
+    }
+
+    #[test]
+    fn test_version_string_static() {
+        // Verify it returns a static reference
+        let v1 = version_string();
+        let v2 = version_string();
+        assert_eq!(v1, v2);
     }
 }
