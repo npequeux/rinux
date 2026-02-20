@@ -3,7 +3,6 @@
 //! Save and restore FPU/SSE/AVX context for task switching.
 
 use core::arch::asm;
-use core::mem::size_of;
 
 /// FPU/SSE context saved with FXSAVE
 #[repr(C, align(16))]
@@ -141,7 +140,7 @@ pub fn enable_sse() {
         write_cr4(cr4);
     }
 
-    kernel::printk!("[FPU] SSE enabled\n");
+    rinux_kernel::printk!("[FPU] SSE enabled\n");
 }
 
 /// Enable AVX (requires XSAVE)
@@ -150,7 +149,7 @@ pub fn enable_avx() -> bool {
         return false;
     }
 
-    use crate::long_mode::{read_cr4, write_cr4, wrmsr};
+    use crate::long_mode::{read_cr4, write_cr4};
 
     unsafe {
         // Enable XSAVE in CR4
@@ -175,17 +174,17 @@ pub fn enable_avx() -> bool {
         );
     }
 
-    kernel::printk!("[FPU] AVX enabled\n");
+    rinux_kernel::printk!("[FPU] AVX enabled\n");
     true
 }
 
 /// Initialize FPU/SSE support
 pub fn init() {
-    kernel::printk!("[FPU] Initializing FPU/SSE support...\n");
+    rinux_kernel::printk!("[FPU] Initializing FPU/SSE support...\n");
 
     // Check for FXSR support
     if !has_fxsr() {
-        kernel::printk!("[FPU] WARNING: FXSAVE/FXRSTOR not supported\n");
+        rinux_kernel::printk!("[FPU] WARNING: FXSAVE/FXRSTOR not supported\n");
         return;
     }
 
@@ -195,7 +194,7 @@ pub fn init() {
     // Try to enable AVX if available
     if has_avx() {
         if enable_avx() {
-            kernel::printk!("[FPU] AVX support enabled\n");
+            rinux_kernel::printk!("[FPU] AVX support enabled\n");
         }
     }
 
@@ -204,8 +203,8 @@ pub fn init() {
         asm!("fninit", options(nostack, nomem));
     }
 
-    kernel::printk!("[FPU] Initialization complete\n");
-    kernel::printk!(
+    rinux_kernel::printk!("[FPU] Initialization complete\n");
+    rinux_kernel::printk!(
         "[FPU] Features: FXSR={}, XSAVE={}, AVX={}\n",
         has_fxsr(),
         has_xsave(),

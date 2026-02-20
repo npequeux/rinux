@@ -63,12 +63,19 @@ Rinux is licensed under the MIT License.
 
 ## Documentation
 
+### Overview & Testing
 - [Test Coverage](docs/TEST_COVERAGE.md) - Unit test coverage report (61 tests, 100% pass rate)
 - [Linux Kernel Coverage Comparison](docs/LINUX_COVERAGE.md) - Detailed comparison with Linux kernel
 - [Coverage Summary](docs/COVERAGE_SUMMARY.md) - Quick reference for feature coverage
+
+### Development & Architecture
 - [Architecture Guide](docs/ARCHITECTURE.md) - System architecture overview
 - [Development Guide](docs/DEVELOPMENT.md) - Developer documentation including testing
 - [Roadmap](docs/ROADMAP.md) - Development roadmap and future plans
+
+### Hardware Support
+- [Hardware Support](docs/HARDWARE_SUPPORT.md) - Comprehensive hardware support documentation
+- [Driver Development Guide](docs/DRIVER_DEVELOPMENT.md) - Guide for writing device drivers
 
 ## Contributing
 
