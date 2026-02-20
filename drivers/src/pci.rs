@@ -9,6 +9,8 @@ use rinux_arch_x86::io::{inl, outl};
 const PCI_CONFIG_ADDRESS: u16 = 0xCF8;
 /// PCI configuration space data port
 const PCI_CONFIG_DATA: u16 = 0xCFC;
+/// Hexadecimal digit characters
+const HEX_DIGITS: &str = "0123456789abcdef";
 
 /// PCI device class codes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -424,12 +426,11 @@ fn print_number(n: usize) {
 
 /// Helper function to print a hexadecimal number (4 digits)
 fn print_hex_u16(n: u16) {
-    let digits = "0123456789abcdef";
     let hex_digits = [
-        digits.as_bytes()[(n >> 12) as usize] as char,
-        digits.as_bytes()[((n >> 8) & 0xF) as usize] as char,
-        digits.as_bytes()[((n >> 4) & 0xF) as usize] as char,
-        digits.as_bytes()[(n & 0xF) as usize] as char,
+        HEX_DIGITS.as_bytes()[(n >> 12) as usize] as char,
+        HEX_DIGITS.as_bytes()[((n >> 8) & 0xF) as usize] as char,
+        HEX_DIGITS.as_bytes()[((n >> 4) & 0xF) as usize] as char,
+        HEX_DIGITS.as_bytes()[(n & 0xF) as usize] as char,
     ];
     
     for &digit in &hex_digits {
@@ -439,10 +440,9 @@ fn print_hex_u16(n: u16) {
 
 /// Helper function to print a hexadecimal number (2 digits)
 fn print_hex_u8(n: u8) {
-    let digits = "0123456789abcdef";
     let hex_digits = [
-        digits.as_bytes()[(n >> 4) as usize] as char,
-        digits.as_bytes()[(n & 0xF) as usize] as char,
+        HEX_DIGITS.as_bytes()[(n >> 4) as usize] as char,
+        HEX_DIGITS.as_bytes()[(n & 0xF) as usize] as char,
     ];
     
     for &digit in &hex_digits {
