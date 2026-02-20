@@ -31,6 +31,7 @@ pub extern "C" fn _start() -> ! {
     rinux_kernel::printk::printk("Rinux kernel initialization complete!\n");
 
     // Enter main kernel loop
+    #[allow(clippy::never_loop)]
     loop {
         rinux_arch_x86::halt();
     }
@@ -56,6 +57,7 @@ fn panic(info: &PanicInfo) -> ! {
     // TODO: Format message
     printk("\n");
 
+    #[allow(clippy::never_loop)]
     loop {
         rinux_arch_x86::halt();
     }
