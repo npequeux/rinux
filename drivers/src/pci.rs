@@ -427,7 +427,7 @@ fn print_number(n: usize) {
 /// Helper function to print a hexadecimal number (4 digits)
 fn print_hex_u16(n: u16) {
     let hex_digits = [
-        HEX_DIGITS.as_bytes()[(n >> 12) as usize] as char,
+        HEX_DIGITS.as_bytes()[((n >> 12) & 0xF) as usize] as char,
         HEX_DIGITS.as_bytes()[((n >> 8) & 0xF) as usize] as char,
         HEX_DIGITS.as_bytes()[((n >> 4) & 0xF) as usize] as char,
         HEX_DIGITS.as_bytes()[(n & 0xF) as usize] as char,
@@ -441,7 +441,7 @@ fn print_hex_u16(n: u16) {
 /// Helper function to print a hexadecimal number (2 digits)
 fn print_hex_u8(n: u8) {
     let hex_digits = [
-        HEX_DIGITS.as_bytes()[(n >> 4) as usize] as char,
+        HEX_DIGITS.as_bytes()[((n >> 4) & 0xF) as usize] as char,
         HEX_DIGITS.as_bytes()[(n & 0xF) as usize] as char,
     ];
     
