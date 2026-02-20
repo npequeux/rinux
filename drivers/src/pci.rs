@@ -368,7 +368,7 @@ pub fn init() {
         PCI_SCANNER.scan();
 
         let device_count = PCI_SCANNER.device_count();
-        
+
         // Print device count
         rinux_kernel::printk::printk("PCI: Found ");
         print_number(device_count);
@@ -393,9 +393,22 @@ pub fn init() {
 /// Helper function to print a single character digit
 fn print_char(ch: char) {
     rinux_kernel::printk::printk(match ch {
-        '0' => "0", '1' => "1", '2' => "2", '3' => "3", '4' => "4",
-        '5' => "5", '6' => "6", '7' => "7", '8' => "8", '9' => "9",
-        'a' => "a", 'b' => "b", 'c' => "c", 'd' => "d", 'e' => "e", 'f' => "f",
+        '0' => "0",
+        '1' => "1",
+        '2' => "2",
+        '3' => "3",
+        '4' => "4",
+        '5' => "5",
+        '6' => "6",
+        '7' => "7",
+        '8' => "8",
+        '9' => "9",
+        'a' => "a",
+        'b' => "b",
+        'c' => "c",
+        'd' => "d",
+        'e' => "e",
+        'f' => "f",
         _ => "?",
     });
 }
@@ -406,18 +419,18 @@ fn print_number(n: usize) {
         rinux_kernel::printk::printk("0");
         return;
     }
-    
+
     // Convert number to string manually (no std available)
     let mut digits = [0u8; 20];
     let mut num = n;
     let mut count = 0;
-    
+
     while num > 0 {
         digits[count] = (num % 10) as u8 + b'0';
         num /= 10;
         count += 1;
     }
-    
+
     // Print digits in reverse order
     for i in (0..count).rev() {
         print_char(digits[i] as char);
@@ -432,7 +445,7 @@ fn print_hex_u16(n: u16) {
         HEX_DIGITS.as_bytes()[((n >> 4) & 0xF) as usize] as char,
         HEX_DIGITS.as_bytes()[(n & 0xF) as usize] as char,
     ];
-    
+
     for &digit in &hex_digits {
         print_char(digit);
     }
@@ -444,7 +457,7 @@ fn print_hex_u8(n: u8) {
         HEX_DIGITS.as_bytes()[((n >> 4) & 0xF) as usize] as char,
         HEX_DIGITS.as_bytes()[(n & 0xF) as usize] as char,
     ];
-    
+
     for &digit in &hex_digits {
         print_char(digit);
     }
@@ -459,17 +472,17 @@ fn print_device_info(device: &PciDevice) {
     print_hex_u8(device.address.device);
     rinux_kernel::printk::printk(".");
     print_number(device.address.function as usize);
-    
+
     // Print vendor:device ID
     rinux_kernel::printk::printk(" [");
     print_hex_u16(device.vendor_id);
     rinux_kernel::printk::printk(":");
     print_hex_u16(device.device_id);
     rinux_kernel::printk::printk("] ");
-    
+
     // Print device class description
     print_device_class(device);
-    
+
     // Print special information for known device types
     if device.is_usb_controller() {
         if let Some(ctrl_type) = device.usb_controller_type() {
@@ -483,7 +496,7 @@ fn print_device_info(device: &PciDevice) {
             rinux_kernel::printk::printk(")");
         }
     }
-    
+
     rinux_kernel::printk::printk("\n");
 }
 
@@ -497,7 +510,9 @@ fn print_device_class(device: &PciDevice) {
         PciClass::MultimediaController => rinux_kernel::printk::printk("Multimedia Controller"),
         PciClass::MemoryController => rinux_kernel::printk::printk("Memory Controller"),
         PciClass::BridgeDevice => rinux_kernel::printk::printk("Bridge Device"),
-        PciClass::SimpleCommunicationController => rinux_kernel::printk::printk("Communication Controller"),
+        PciClass::SimpleCommunicationController => {
+            rinux_kernel::printk::printk("Communication Controller")
+        }
         PciClass::BaseSystemPeripheral => rinux_kernel::printk::printk("System Peripheral"),
         PciClass::InputDevice => rinux_kernel::printk::printk("Input Device"),
         PciClass::DockingStation => rinux_kernel::printk::printk("Docking Station"),
@@ -507,7 +522,9 @@ fn print_device_class(device: &PciDevice) {
         PciClass::IntelligentController => rinux_kernel::printk::printk("Intelligent Controller"),
         PciClass::SatelliteController => rinux_kernel::printk::printk("Satellite Controller"),
         PciClass::EncryptionController => rinux_kernel::printk::printk("Encryption Controller"),
-        PciClass::SignalProcessingController => rinux_kernel::printk::printk("Signal Processing Controller"),
+        PciClass::SignalProcessingController => {
+            rinux_kernel::printk::printk("Signal Processing Controller")
+        }
         PciClass::Other => rinux_kernel::printk::printk("Other"),
     }
 }

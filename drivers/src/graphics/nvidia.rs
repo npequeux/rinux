@@ -7,18 +7,18 @@ use crate::pci::PciDevice;
 /// NVIDIA GPU architectures
 #[derive(Debug, Clone, Copy)]
 pub enum NvidiaArchitecture {
-    Maxwell,  // GTX 900 series
-    Pascal,   // GTX 1000 series
-    Turing,   // RTX 2000 series
-    Ampere,   // RTX 3000 series
-    Ada,      // RTX 4000 series
+    Maxwell, // GTX 900 series
+    Pascal,  // GTX 1000 series
+    Turing,  // RTX 2000 series
+    Ampere,  // RTX 3000 series
+    Ada,     // RTX 4000 series
     Unknown,
 }
 
 /// Detect NVIDIA graphics device
 pub fn detect_device(pci_device: &PciDevice) {
     let device_id = pci_device.device_id;
-    
+
     let architecture = match device_id {
         // Ada Lovelace (RTX 4000 series)
         0x2680..=0x27FF => NvidiaArchitecture::Ada,

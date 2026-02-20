@@ -2,12 +2,12 @@
 //!
 //! This module provides USB host controller and device support.
 
-pub mod xhci;
-pub mod transfer;
 pub mod device;
+pub mod driver;
 pub mod hid;
 pub mod mass_storage;
-pub mod driver;
+pub mod transfer;
+pub mod xhci;
 
 use core::fmt;
 

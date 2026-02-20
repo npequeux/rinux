@@ -78,7 +78,9 @@ impl IntelGpu {
             // Gen11 (Ice Lake)
             0x8A50..=0x8A71 => IntelGeneration::Gen11,
             // Gen12 (Tiger Lake, Alder Lake, Raptor Lake)
-            0x4C80..=0x4C9A | 0x9A40..=0x9AF8 | 0x4680..=0x46D2 | 0xA780..=0xA7A1 => IntelGeneration::Gen12,
+            0x4C80..=0x4C9A | 0x9A40..=0x9AF8 | 0x4680..=0x46D2 | 0xA780..=0xA7A1 => {
+                IntelGeneration::Gen12
+            }
             _ => IntelGeneration::Unknown,
         }
     }
