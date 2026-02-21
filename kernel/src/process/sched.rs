@@ -10,6 +10,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use spin::Mutex;
 
 /// Maximum number of tasks
+#[allow(dead_code)]
 const MAX_TASKS: usize = 256;
 
 /// Global scheduler state
@@ -26,6 +27,12 @@ pub struct Scheduler {
     tasks: Vec<Option<Task>>,
     /// Current running task
     current: Option<Pid>,
+}
+
+impl Default for Scheduler {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Scheduler {
@@ -142,7 +149,7 @@ pub fn init() {
 /// Schedule next task
 pub fn schedule() {
     let mut sched = SCHEDULER.lock();
-    if let Some(next_pid) = sched.schedule_next() {
+    if let Some(_next_pid) = sched.schedule_next() {
         // TODO: Perform context switch to next_pid
         // For now, just update the current task
         drop(sched);

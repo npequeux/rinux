@@ -34,6 +34,12 @@ pub struct DateTime {
     pub second: u8,
 }
 
+impl Default for DateTime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DateTime {
     /// Create a new DateTime
     pub const fn new() -> Self {

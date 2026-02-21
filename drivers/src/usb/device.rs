@@ -86,17 +86,15 @@ impl UsbDeviceManager {
 
     /// Update device descriptor
     pub fn set_descriptor(&mut self, address: u8, descriptor: UsbDeviceDescriptor) -> bool {
-        for device_opt in self.devices.iter_mut().take(self.count) {
-            if let Some(device_info) = device_opt {
-                if device_info.device.address == address {
-                    device_info.descriptor = Some(descriptor);
-                    device_info.device.vendor_id = descriptor.vendor_id;
-                    device_info.device.product_id = descriptor.product_id;
-                    device_info.device.class = descriptor.device_class;
-                    device_info.device.subclass = descriptor.device_subclass;
-                    device_info.device.protocol = descriptor.device_protocol;
-                    return true;
-                }
+        for device_info in self.devices.iter_mut().take(self.count).flatten() {
+            if device_info.device.address == address {
+                device_info.descriptor = Some(descriptor);
+                device_info.device.vendor_id = descriptor.vendor_id;
+                device_info.device.product_id = descriptor.product_id;
+                device_info.device.class = descriptor.device_class;
+                device_info.device.subclass = descriptor.device_subclass;
+                device_info.device.protocol = descriptor.device_protocol;
+                return true;
             }
         }
         false
@@ -104,12 +102,10 @@ impl UsbDeviceManager {
 
     /// Update device state
     pub fn set_state(&mut self, address: u8, state: UsbDeviceState) -> bool {
-        for device_opt in self.devices.iter_mut().take(self.count) {
-            if let Some(device_info) = device_opt {
-                if device_info.device.address == address {
-                    device_info.state = state;
-                    return true;
-                }
+        for device_info in self.devices.iter_mut().take(self.count).flatten() {
+            if device_info.device.address == address {
+                device_info.state = state;
+                return true;
             }
         }
         false
@@ -117,14 +113,11 @@ impl UsbDeviceManager {
 
     /// Get device by address
     pub fn get_device(&self, address: u8) -> Option<&UsbDeviceInfo> {
-        for device_opt in self.devices.iter().take(self.count) {
-            if let Some(device_info) = device_opt {
-                if device_info.device.address == address {
-                    return Some(device_info);
-                }
-            }
-        }
-        None
+        self.devices
+            .iter()
+            .take(self.count)
+            .flatten()
+            .find(|device_info| device_info.device.address == address)
     }
 
     /// Get device count
@@ -159,6 +152,7 @@ pub fn device_manager() -> &'static UsbDeviceManager {
 /// The caller must ensure that:
 /// - There are no other active references to the device manager
 /// - No concurrent access occurs (e.g., during single-threaded boot)
+///
 /// TODO: Replace with proper synchronization (Mutex) when threading is added
 #[allow(static_mut_refs)]
 pub unsafe fn device_manager_mut() -> &'static mut UsbDeviceManager {

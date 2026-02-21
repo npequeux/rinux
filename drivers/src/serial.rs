@@ -195,6 +195,7 @@ impl SerialPort {
     /// # Safety
     ///
     /// Performs I/O port read.
+    #[allow(dead_code)]
     unsafe fn is_ring_indicator(&self) -> bool {
         inb(self.base + MODEM_STATUS) & 0x40 != 0
     }
@@ -347,9 +348,9 @@ pub fn read_bytes(buffer: &mut [u8]) -> usize {
 /// Read multiple bytes from a specific COM port into a buffer (non-blocking)
 pub fn read_bytes_from(port: ComPort, buffer: &mut [u8]) -> usize {
     let mut count = 0;
-    for i in 0..buffer.len() {
+    for byte_slot in buffer.iter_mut() {
         if let Some(byte) = read_byte_from(port) {
-            buffer[i] = byte;
+            *byte_slot = byte;
             count += 1;
         } else {
             break;

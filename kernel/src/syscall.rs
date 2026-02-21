@@ -171,10 +171,12 @@ pub fn handle_syscall(
             sched::yield_now();
             Ok(0)
         }
-        SyscallNumber::Unknown | _ => {
-            crate::printk::printk("Unknown syscall: ");
-            // TODO: Print syscall number
-            crate::printk::printk("\n");
+        SyscallNumber::Unknown => {
+            crate::printk::printk("Unknown syscall\n");
+            Err(errno::ENOSYS)
+        }
+        _ => {
+            crate::printk::printk("Unknown syscall\n");
             Err(errno::ENOSYS)
         }
     }
