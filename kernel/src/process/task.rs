@@ -109,7 +109,7 @@ mod tests {
         assert_eq!(TaskState::Sleeping, TaskState::Sleeping);
         assert_eq!(TaskState::Stopped, TaskState::Stopped);
         assert_eq!(TaskState::Zombie, TaskState::Zombie);
-        
+
         assert_ne!(TaskState::Running, TaskState::Sleeping);
         assert_ne!(TaskState::Running, TaskState::Stopped);
         assert_ne!(TaskState::Running, TaskState::Zombie);
@@ -143,7 +143,7 @@ mod tests {
         let task1 = Task::new(1);
         let task2 = Task::new(100);
         let task3 = Task::new(-1);
-        
+
         assert_eq!(task1.pid, 1);
         assert_eq!(task2.pid, 100);
         assert_eq!(task3.pid, -1);
@@ -159,13 +159,13 @@ mod tests {
     fn test_task_modify_state() {
         let mut task = Task::new(1);
         assert_eq!(task.state, TaskState::Running);
-        
+
         task.state = TaskState::Sleeping;
         assert_eq!(task.state, TaskState::Sleeping);
-        
+
         task.state = TaskState::Stopped;
         assert_eq!(task.state, TaskState::Stopped);
-        
+
         task.state = TaskState::Zombie;
         assert_eq!(task.state, TaskState::Zombie);
     }
@@ -175,10 +175,10 @@ mod tests {
         let mut task = Task::new(1);
         assert_eq!(task.uid, 0);
         assert_eq!(task.gid, 0);
-        
+
         task.uid = 1000;
         task.gid = 1000;
-        
+
         assert_eq!(task.uid, 1000);
         assert_eq!(task.gid, 1000);
     }
@@ -186,12 +186,12 @@ mod tests {
     #[test]
     fn test_task_fields_independent() {
         let mut task = Task::new(42);
-        
+
         task.pid = 100;
         task.uid = 1000;
         task.gid = 2000;
         task.state = TaskState::Sleeping;
-        
+
         assert_eq!(task.pid, 100);
         assert_eq!(task.uid, 1000);
         assert_eq!(task.gid, 2000);
