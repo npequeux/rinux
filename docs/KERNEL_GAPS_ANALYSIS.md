@@ -30,16 +30,18 @@ To achieve full modern laptop functionality, Rinux requires implementation of ap
 ## Critical Missing Components (Priority 1 - Bootability)
 
 ### 1. Complete Memory Management
-**Status:** 40% implemented  
+**Status:** 50% implemented (up from 40%)  
 **Completed:**
 - ✅ Page fault handler (page_fault.rs with full implementation)
 - ✅ Frame deallocator (deallocate_frame implemented)
 - ✅ Slab allocator (slab.rs integrated)
 - ✅ Copy-on-write support (COW tracking in page_fault.rs)
 - ✅ Page table structures (paging.rs, page_handler.rs)
+- ✅ Virtual memory allocator (vmalloc.rs with region management, 244 LOC)
+- ✅ Memory mapping (mmap.rs with extent trees, BTreeMap regions, 290+ LOC)
+- ✅ mmap/munmap/mprotect syscalls fully integrated
 **Missing:**
 - ⚠️ TLB management and shootdown (partial - tlb module in paging.rs)
-- ⚠️ Virtual memory allocator (vmalloc stub exists)
 - ✗ Memory zones (DMA, Normal, High)
 - ✗ NUMA support
 - ✗ Huge pages (2MB, 1GB)
@@ -66,15 +68,18 @@ To achieve full modern laptop functionality, Rinux requires implementation of ap
 - ✗ Disk encryption (dm-crypt)
 
 ### 3. File Systems
-**Status:** 35% implemented  
+**Status:** 55% implemented (up from 35%)  
 **Completed:**
 - ✅ VFS layer (vfs.rs with full abstraction)
 - ✅ VFS operations (mount.rs with mount, unmount, root fs)
+- ✅ File descriptor management (fd.rs with FdEntry, allocation, per-process tables)
 - ✅ tmpfs/ramfs (tmpfs.rs - simplest filesystem)
 - ✅ ext2 (ext2.rs - simple, good foundation)
+- ✅ ext4 (ext4.rs - 600+ LOC with extent trees, 48-bit blocks, journal ready)
+- ✅ FAT32 (fat32.rs - 500+ LOC with LFN support, cluster chains, FSInfo)
+- ✅ File operation syscalls (open, read, write, close with error handling)
 **Missing:**
-- ✗ ext4 (most common Linux filesystem)
-- ✗ FAT32/exFAT (USB drives, compatibility)
+- ✗ exFAT (extended FAT for large files)
 - ✗ NTFS driver (read/write Windows partitions)
 - ✗ Btrfs/ZFS (modern copy-on-write filesystems)
 - ✗ ISO9660 (CD/DVD)

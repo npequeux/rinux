@@ -8,6 +8,8 @@ extern crate alloc;
 
 pub mod tmpfs;
 pub mod ext2;
+pub mod ext4;
+pub mod fat32;
 pub mod mount;
 pub mod vfs;
 
@@ -38,6 +40,10 @@ pub enum FsError {
     IoError,
     /// Out of memory
     OutOfMemory,
+    /// Not supported
+    NotSupported,
+    /// Invalid data
+    InvalidData,
 }
 
 /// Filesystem type
@@ -63,4 +69,6 @@ pub enum FsType {
 pub fn init() {
     tmpfs::init();
     ext2::init();
+    ext4::init();
+    fat32::init();
 }

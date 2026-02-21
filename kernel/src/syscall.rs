@@ -92,6 +92,10 @@ pub mod errno {
     pub const ENOENT: isize = -2;
     /// No such process
     pub const ESRCH: isize = -3;
+    /// Interrupted system call
+    pub const EINTR: isize = -4;
+    /// I/O error
+    pub const EIO: isize = -5;
     /// Bad file descriptor
     pub const EBADF: isize = -9;
     /// Out of memory
@@ -100,8 +104,16 @@ pub mod errno {
     pub const EACCES: isize = -13;
     /// Bad address
     pub const EFAULT: isize = -14;
+    /// File exists
+    pub const EEXIST: isize = -17;
+    /// Not a directory
+    pub const ENOTDIR: isize = -20;
+    /// Is a directory
+    pub const EISDIR: isize = -21;
     /// Invalid argument
     pub const EINVAL: isize = -22;
+    /// Too many open files
+    pub const EMFILE: isize = -24;
     /// Function not implemented
     pub const ENOSYS: isize = -38;
 }
@@ -134,22 +146,64 @@ pub fn handle_syscall(
             let fd = arg1 as i32;
             let buf = arg2 as *mut u8;
             let count = arg3;
-            // TODO: Implement proper read with buffer safety checks
-            let _ = (fd, buf, count);
-            Err(errno::ENOSYS)
+            
+            // Validate buffer pointer
+            if buf.is_null() || count == 0 {
+                return Err(errno::EINVAL);
+            }
+
+            // Read from file descriptor
+            match crate::fs::fd::read_fd(fd, buf, count) {
+                Ok(bytes_read) => Ok(bytes_read),
+                Err(_) => Err(errno::EBADF),
+            }
         }
         SyscallNumber::Write => {
             // arg1: fd, arg2: buf ptr, arg3: count
             let fd = arg1 as i32;
             let buf = arg2 as *const u8;
             let count = arg3;
-            // TODO: Implement proper write with buffer safety checks
-            let _ = (fd, buf, count);
-            Err(errno::ENOSYS)
+            
+            // Validate buffer pointer
+            if buf.is_null() || count == 0 {
+                return Err(errno::EINVAL);
+            }
+
+            // Write to file descriptor
+            match crate::fs::fd::write_fd(fd, buf, count) {
+                Ok(bytes_written) => Ok(bytes_written),
+                Err(_) => Err(errno::EBADF),
+            }
         }
         SyscallNumber::Open => {
-            // TODO: Implement open
-            Err(errno::ENOSYS)
+            // arg1: pathname ptr, arg2: flags, arg3: mode
+            let pathname_ptr = arg1 as *const u8;
+            let flags = arg2 as i32;
+            let mode = arg3 as u32;
+            
+            // Validate pathname pointer
+            if pathname_ptr.is_null() {
+                return Err(errno::EFAULT);
+            }
+
+            // Read pathname from user space
+            let pathname = unsafe {
+                let mut len = 0;
+                while len < 4096 && *pathname_ptr.add(len) != 0 {
+                    len += 1;
+                }
+                if len == 0 {
+                    return Err(errno::EINVAL);
+                }
+                let slice = core::slice::from_raw_parts(pathname_ptr, len);
+                core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
+            };
+
+            // Open file via VFS
+            match crate::fs::open_file(pathname, flags, mode) {
+                Ok(fd) => Ok(fd as usize),
+                Err(e) => Err(e),
+            }
         }
         SyscallNumber::Close => {
             // arg1: fd
@@ -212,16 +266,42 @@ pub fn handle_syscall(
             Err(errno::ENOSYS)
         }
         SyscallNumber::Mmap => {
-            // TODO: Implement memory mapping
-            Err(errno::ENOSYS)
+            // arg1: addr, arg2: length, arg3: prot, arg4: flags, arg5: fd, arg6: offset
+            let addr = if arg1 == 0 { None } else { Some(arg1) };
+            let length = arg2;
+            let prot = arg3 as i32;
+            let flags = _arg4 as i32;
+            let fd = _arg5 as i32;
+            let offset = _arg6;
+
+            // Use mm crate's mmap
+            match mm::mmap::mmap(addr, length, prot, flags, fd, offset) {
+                Ok(mapped_addr) => Ok(mapped_addr),
+                Err(_) => Err(errno::ENOMEM),
+            }
         }
         SyscallNumber::Munmap => {
-            // TODO: Implement memory unmapping
-            Err(errno::ENOSYS)
+            // arg1: addr, arg2: length
+            let addr = arg1;
+            let length = arg2;
+
+            // Use mm crate's munmap
+            match mm::mmap::munmap(addr, length) {
+                Ok(()) => Ok(0),
+                Err(_) => Err(errno::EINVAL),
+            }
         }
         SyscallNumber::Mprotect => {
-            // TODO: Implement memory protection change
-            Err(errno::ENOSYS)
+            // arg1: addr, arg2: length, arg3: prot
+            let addr = arg1;
+            let length = arg2;
+            let prot = arg3 as i32;
+
+            // Use mm crate's mprotect
+            match mm::mmap::mprotect(addr, length, prot) {
+                Ok(()) => Ok(0),
+                Err(_) => Err(errno::EINVAL),
+            }
         }
         SyscallNumber::SchedYield => {
             use crate::process::sched;

@@ -10,6 +10,7 @@ extern crate alloc;
 pub mod allocator;
 pub mod frame;
 pub mod heap;
+pub mod mmap;
 pub mod oom;
 pub mod page_fault;
 pub mod page_handler;

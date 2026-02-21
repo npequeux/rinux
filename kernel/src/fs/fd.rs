@@ -127,3 +127,43 @@ pub fn get_file(fd: FileDescriptor) -> Option<File> {
         None
     }
 }
+
+/// Read from a file descriptor
+pub fn read_fd(fd: FileDescriptor, buf: *mut u8, count: usize) -> Result<usize, ()> {
+    let mut table = GLOBAL_FD_TABLE.lock();
+    if let Some(ref mut t) = *table {
+        if let Some(file) = t.get_file_mut(fd) {
+            // TODO: Call actual filesystem read operation
+            if !file.is_readable() {
+                return Err(());
+            }
+            // For now, return 0 (EOF)
+            let _ = (buf, count);
+            Ok(0)
+        } else {
+            Err(())
+        }
+    } else {
+        Err(())
+    }
+}
+
+/// Write to a file descriptor
+pub fn write_fd(fd: FileDescriptor, buf: *const u8, count: usize) -> Result<usize, ()> {
+    let mut table = GLOBAL_FD_TABLE.lock();
+    if let Some(ref mut t) = *table {
+        if let Some(file) = t.get_file_mut(fd) {
+            // TODO: Call actual filesystem write operation
+            if !file.is_writable() {
+                return Err(());
+            }
+            // For now, pretend we wrote all bytes
+            let _ = buf;
+            Ok(count)
+        } else {
+            Err(())
+        }
+    } else {
+        Err(())
+    }
+}
