@@ -368,6 +368,7 @@ pub fn get() -> Option<Tmpfs> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
 
     #[test]
     fn test_permissions() {

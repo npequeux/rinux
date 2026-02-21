@@ -9,13 +9,31 @@ Rinux is a modern operating system kernel written in Rust, inspired by Linux's a
 
 ## Features
 
-- **x86_64 Architecture Support**: Initial focus on PC hardware with x86_64 architecture
-- **Memory Management**: Advanced memory allocation and paging
-- **Process Management**: Multi-tasking and scheduling
-- **Device Drivers**: Modular driver architecture
-- **File Systems**: VFS abstraction layer
+### Currently Implemented ✅
+
+- **x86_64 Architecture Support**: Full bootloader, interrupt handling, paging, and exception management
+- **Memory Management**: Slab allocator, page fault handling, frame allocation, and virtual memory
+- **VFS Layer**: POSIX-compliant virtual filesystem with working TmpFS
+- **Device Drivers**: Serial (COM1-4), keyboard with LED control, VGA text mode, framebuffer graphics
+- **GPU Support**: Detection and initialization for Intel i915, AMD (RDNA/GCN), NVIDIA (Maxwell+)
+- **Storage Framework**: AHCI and NVMe driver structures with partition table support (GPT/MBR)
+- **Console**: VGA text mode and multi-port serial console with configurable parameters
+
+### Partially Implemented ⚠️
+
+- **Process Management**: Task structures and scheduler framework (fork/exec not yet functional)
+- **Block Storage**: Device detection and abstraction layer (DMA operations pending)
+- **Filesystems**: ext2/ext4 structures defined (disk I/O not implemented)
+- **System Calls**: Infrastructure and dispatcher (most syscalls are stubs)
+- **USB Stack**: xHCI host controller framework (device enumeration pending)
+
+### Planned 📋
+
+- **Task Switching**: Full context switching and preemption
 - **Network Stack**: TCP/IP implementation
-- **Extensible Architecture**: Support for additional architectures planned
+- **Complete Storage**: DMA operations and interrupt-driven I/O
+- **Additional Filesystems**: Complete ext2/ext4 with disk I/O
+- **Multi-architecture**: ARM64 and RISC-V support
 
 ## Building
 

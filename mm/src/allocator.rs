@@ -83,6 +83,7 @@ pub fn init() {
     // For now, we assume it's available at HEAP_START
 }
 
+#[cfg(not(test))]
 #[alloc_error_handler]
 fn alloc_error_handler(layout: Layout) -> ! {
     panic!("Allocation error: {:?}", layout);
