@@ -52,7 +52,9 @@ impl VfsNode {
 
     /// Remove a child from this node
     pub fn remove_child(&mut self, child_inode: Inode) {
-        self.children.retain(|&inode| inode != child_inode);
+        if self.is_directory() {
+            self.children.retain(|&inode| inode != child_inode);
+        }
     }
 
     /// Check if this is a directory
