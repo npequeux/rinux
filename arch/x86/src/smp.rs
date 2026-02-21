@@ -184,8 +184,6 @@ extern "C" fn ap_entry() -> ! {
     // Idle loop - halt until next interrupt
     crate::halt()
 }
-
-/// Start an Application Processor
 #[allow(dead_code)]
 fn start_ap(cpu_id: u32) -> bool {
     unsafe {

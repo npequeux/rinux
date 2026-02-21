@@ -214,9 +214,7 @@ pub fn init() {
 }
 
 /// Get touchpad instance
+#[allow(static_mut_refs)]
 pub fn get() -> &'static mut Touchpad {
-    #[allow(static_mut_refs)]
-    unsafe {
-        (&raw mut TOUCHPAD).cast::<Touchpad>().as_mut().unwrap()
-    }
+    unsafe { &mut TOUCHPAD }
 }

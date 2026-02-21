@@ -232,11 +232,9 @@ unsafe fn read_pm_profile(_rsdp: &Rsdp) -> Option<PmProfile> {
 }
 
 /// Get ACPI info
+#[allow(static_mut_refs)]
 pub fn get_info() -> &'static AcpiInfo {
-    #[allow(static_mut_refs)]
-    unsafe {
-        (&raw const ACPI_INFO).cast::<AcpiInfo>().as_ref().unwrap()
-    }
+    unsafe { &ACPI_INFO }
 }
 
 /// Check if system is a laptop

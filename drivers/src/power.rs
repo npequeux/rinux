@@ -171,14 +171,9 @@ pub fn init() {
 }
 
 /// Get power manager instance
+#[allow(static_mut_refs)]
 pub fn get() -> &'static mut PowerManager {
-    #[allow(static_mut_refs)]
-    unsafe {
-        (&raw mut POWER_MANAGER)
-            .cast::<PowerManager>()
-            .as_mut()
-            .unwrap()
-    }
+    unsafe { &mut POWER_MANAGER }
 }
 
 /// Check if system has a battery
