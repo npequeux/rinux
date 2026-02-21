@@ -119,7 +119,7 @@ impl ManagedBlockDevice {
     /// Read blocks with statistics tracking
     pub fn read_blocks(&self, start_block: u64, buffer: &mut [u8]) -> Result<usize, &'static str> {
         let result = self.device.read_blocks(start_block, buffer);
-        
+
         let mut stats = self.stats.lock();
         match result {
             Ok(count) => {
@@ -130,14 +130,14 @@ impl ManagedBlockDevice {
                 stats.errors += 1;
             }
         }
-        
+
         result
     }
 
     /// Write blocks with statistics tracking
     pub fn write_blocks(&self, start_block: u64, buffer: &[u8]) -> Result<usize, &'static str> {
         let result = self.device.write_blocks(start_block, buffer);
-        
+
         let mut stats = self.stats.lock();
         match result {
             Ok(count) => {
@@ -148,7 +148,7 @@ impl ManagedBlockDevice {
                 stats.errors += 1;
             }
         }
-        
+
         result
     }
 
@@ -178,10 +178,10 @@ static NEXT_DEVICE_ID: AtomicU64 = AtomicU64::new(0);
 pub fn register_device(device: Box<dyn BlockDevice>) -> u32 {
     let device_id = NEXT_DEVICE_ID.fetch_add(1, Ordering::SeqCst) as u32;
     let managed = ManagedBlockDevice::new(device);
-    
+
     let mut devices = BLOCK_DEVICES.lock();
     devices.push(managed);
-    
+
     device_id
 }
 
@@ -243,7 +243,7 @@ mod tests {
             name: String::from("test0"),
             blocks: 1000,
         };
-        
+
         assert_eq!(device.block_count(), 1000);
         assert_eq!(device.block_size(), BLOCK_SIZE);
         assert_eq!(device.name(), "test0");
@@ -255,12 +255,12 @@ mod tests {
             name: String::from("test0"),
             blocks: 1000,
         });
-        
+
         let managed = ManagedBlockDevice::new(device);
         let mut buffer = vec![0u8; BLOCK_SIZE * 2];
-        
+
         managed.read_blocks(0, &mut buffer).unwrap();
-        
+
         let stats = managed.get_stats();
         assert_eq!(stats.read_count, 1);
         assert_eq!(stats.read_bytes, (BLOCK_SIZE * 2) as u64);

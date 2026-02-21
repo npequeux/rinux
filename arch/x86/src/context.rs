@@ -17,6 +17,12 @@ pub struct Context {
     pub rip: u64,
 }
 
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Context {
     /// Create a new context
     pub const fn new() -> Self {
@@ -81,6 +87,12 @@ pub struct InterruptFrame {
     pub ss: u64,
 }
 
+impl Default for InterruptFrame {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InterruptFrame {
     /// Create a new interrupt frame
     pub const fn new() -> Self {
@@ -125,6 +137,12 @@ pub struct FullContext {
     pub es: u64,
     pub fs: u64,
     pub gs: u64,
+}
+
+impl Default for FullContext {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FullContext {

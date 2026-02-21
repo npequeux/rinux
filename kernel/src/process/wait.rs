@@ -93,18 +93,18 @@ pub fn register_zombie(pid: Pid, parent_pid: Pid, exit_code: i32) {
 /// Wait for any child process
 pub fn wait_any(parent_pid: Pid, options: i32) -> Result<WaitResult, &'static str> {
     let mut zombies = ZOMBIE_PROCESSES.lock();
-    
+
     // Look for zombie child of this parent
     if let Some(idx) = zombies.iter().position(|(_, ppid, _)| *ppid == parent_pid) {
         let (child_pid, _, status) = zombies.remove(idx);
         return Ok(WaitResult::Exited(child_pid, status));
     }
-    
+
     // Check if WNOHANG is set
     if (options & wait_options::WNOHANG) != 0 {
         return Ok(WaitResult::NoChild);
     }
-    
+
     // Would need to block the parent process here
     // For now, return waiting
     Ok(WaitResult::Waiting)
@@ -113,18 +113,21 @@ pub fn wait_any(parent_pid: Pid, options: i32) -> Result<WaitResult, &'static st
 /// Wait for a specific child process
 pub fn wait_pid(parent_pid: Pid, child_pid: Pid, options: i32) -> Result<WaitResult, &'static str> {
     let mut zombies = ZOMBIE_PROCESSES.lock();
-    
+
     // Look for specific zombie child
-    if let Some(idx) = zombies.iter().position(|(pid, ppid, _)| *pid == child_pid && *ppid == parent_pid) {
+    if let Some(idx) = zombies
+        .iter()
+        .position(|(pid, ppid, _)| *pid == child_pid && *ppid == parent_pid)
+    {
         let (_, _, status) = zombies.remove(idx);
         return Ok(WaitResult::Exited(child_pid, status));
     }
-    
+
     // Check if WNOHANG is set
     if (options & wait_options::WNOHANG) != 0 {
         return Ok(WaitResult::NoChild);
     }
-    
+
     // Would need to block the parent process here
     Ok(WaitResult::Waiting)
 }
@@ -132,11 +135,11 @@ pub fn wait_pid(parent_pid: Pid, child_pid: Pid, options: i32) -> Result<WaitRes
 /// Process exit - convert to zombie state
 pub fn process_exit(task: &mut Task, exit_code: i32) {
     task.exit(exit_code);
-    
+
     // Register as zombie if has parent
     if let Some(parent_pid) = task.parent_pid {
         register_zombie(task.pid, parent_pid, exit_code);
-        
+
         // TODO: Send SIGCHLD to parent
     } else {
         // Init process or orphan - clean up immediately

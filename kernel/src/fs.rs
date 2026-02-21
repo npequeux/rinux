@@ -36,7 +36,7 @@ pub mod flags {
 /// Open a file
 pub fn open_file(_pathname: &str, flags: i32, _mode: u32) -> Result<FileDescriptor, isize> {
     use crate::syscall::errno;
-    
+
     if !is_initialized() {
         return Err(errno::EIO);
     }
@@ -52,7 +52,7 @@ pub fn open_file(_pathname: &str, flags: i32, _mode: u32) -> Result<FileDescript
     // For now, create a dummy file
     // TODO: Integrate with actual VFS to lookup/create files
     let file = File::new(0, FileType::Regular, mode);
-    
+
     match fd::allocate_fd(file) {
         Ok(fd) => Ok(fd),
         Err(_) => Err(errno::EMFILE),

@@ -3,9 +3,9 @@
 //! User-space memory mapping implementation.
 
 use crate::frame;
-use crate::paging::{PageMapper, VirtAddr, PhysAddr};
-use spin::Mutex;
+use crate::paging::{PageMapper, PhysAddr, VirtAddr};
 use alloc::collections::BTreeMap;
+use spin::Mutex;
 
 /// Memory protection flags
 pub mod prot {
@@ -63,10 +63,10 @@ impl MemoryMapper {
     /// Find a free region of the specified size
     fn find_free_region(&mut self, size: usize) -> Option<usize> {
         let aligned_size = (size + PAGE_SIZE - 1) & !(PAGE_SIZE - 1);
-        
+
         // Try to find a gap in existing mappings
         let mut addr = self.next_addr;
-        
+
         while addr + aligned_size < USER_MMAP_END {
             // Check if this range overlaps with any existing mapping
             let mut overlaps = false;
@@ -79,12 +79,12 @@ impl MemoryMapper {
                     break;
                 }
             }
-            
+
             if !overlaps {
                 return Some(addr);
             }
         }
-        
+
         None
     }
 
@@ -97,9 +97,9 @@ impl MemoryMapper {
         flags: i32,
         _fd: i32,
         _offset: usize,
-    ) -> Result<usize, ()> {
+    ) -> Result<usize, &'static str> {
         if size == 0 {
-            return Err(());
+            return Err("Invalid size: 0");
         }
 
         let aligned_size = (size + PAGE_SIZE - 1) & !(PAGE_SIZE - 1);
@@ -109,7 +109,7 @@ impl MemoryMapper {
             if (flags & map::MAP_FIXED) != 0 {
                 // Must use exact address
                 if requested_addr & (PAGE_SIZE - 1) != 0 {
-                    return Err(()); // Not page-aligned
+                    return Err("Address not page-aligned"); // Not page-aligned
                 }
                 // TODO: Check if range is available or unmap existing
                 requested_addr
@@ -129,15 +129,18 @@ impl MemoryMapper {
                     if available {
                         requested_addr
                     } else {
-                        self.find_free_region(aligned_size).ok_or(())?
+                        self.find_free_region(aligned_size)
+                            .ok_or("No free region available")?
                     }
                 } else {
-                    self.find_free_region(aligned_size).ok_or(())?
+                    self.find_free_region(aligned_size)
+                        .ok_or("No free region available")?
                 }
             }
         } else {
             // No hint, find a region
-            self.find_free_region(aligned_size).ok_or(())?
+            self.find_free_region(aligned_size)
+                .ok_or("No free region available")?
         };
 
         // Allocate physical frames and map them
@@ -146,9 +149,9 @@ impl MemoryMapper {
 
         for i in 0..num_pages {
             let virt_addr = map_addr + i * PAGE_SIZE;
-            
+
             // Allocate physical frame
-            let frame = frame::allocate_frame().ok_or(())?;
+            let frame = frame::allocate_frame().ok_or("Out of memory")?;
 
             // Zero the frame before mapping
             // TODO: This assumes identity mapping or temporary mapping
@@ -160,17 +163,17 @@ impl MemoryMapper {
             // Determine page permissions
             let writable = (prot & prot::PROT_WRITE) != 0;
             let user_accessible = true; // User-space mapping
-            
+
             let virt = VirtAddr::new(virt_addr as u64);
             let phys = PhysAddr::new(frame.start_address());
-            
-            if let Err(_) = mapper.map_page(virt, phys, writable, user_accessible) {
+
+            if mapper.map_page(virt, phys, writable, user_accessible).is_err() {
                 // Failed to map, clean up already mapped pages
                 for j in 0..i {
                     let cleanup_virt = VirtAddr::new((map_addr + j * PAGE_SIZE) as u64);
                     let _ = mapper.unmap_page(cleanup_virt);
                 }
-                return Err(());
+                return Err("Failed to map page");
             }
         }
 
@@ -191,14 +194,14 @@ impl MemoryMapper {
     }
 
     /// Unmap memory region
-    fn unmap(&mut self, addr: usize, size: usize) -> Result<(), ()> {
+    fn unmap(&mut self, addr: usize, size: usize) -> Result<(), &'static str> {
         if size == 0 {
-            return Err(());
+            return Err("Invalid size: 0");
         }
 
         // Check alignment
         if addr & (PAGE_SIZE - 1) != 0 {
-            return Err(());
+            return Err("Address not page-aligned");
         }
 
         let aligned_size = (size + PAGE_SIZE - 1) & !(PAGE_SIZE - 1);
@@ -214,7 +217,7 @@ impl MemoryMapper {
                 for i in 0..num_pages {
                     let virt_addr = addr + i * PAGE_SIZE;
                     let virt = VirtAddr::new(virt_addr as u64);
-                    
+
                     if let Ok(frame) = mapper.unmap_page(virt) {
                         frame::deallocate_frame(frame);
                     }
@@ -227,7 +230,7 @@ impl MemoryMapper {
         }
 
         // TODO: Handle partial unmaps and region splitting
-        Err(())
+        Err("Region not found")
     }
 }
 
@@ -241,20 +244,22 @@ pub fn mmap(
     flags: i32,
     fd: i32,
     offset: usize,
-) -> Result<usize, ()> {
-    MEMORY_MAPPER.lock().map(addr, size, prot, flags, fd, offset)
+) -> Result<usize, &'static str> {
+    MEMORY_MAPPER
+        .lock()
+        .map(addr, size, prot, flags, fd, offset)
 }
 
 /// Unmap memory from user address space
-pub fn munmap(addr: usize, size: usize) -> Result<(), ()> {
+pub fn munmap(addr: usize, size: usize) -> Result<(), &'static str> {
     MEMORY_MAPPER.lock().unmap(addr, size)
 }
 
 /// Change protection of memory region
-pub fn mprotect(addr: usize, size: usize, prot: i32) -> Result<(), ()> {
+pub fn mprotect(addr: usize, size: usize, prot: i32) -> Result<(), &'static str> {
     // TODO: Implement mprotect
     let _ = (addr, size, prot);
-    Err(())
+    Err("mprotect not yet implemented")
 }
 
 #[cfg(test)]

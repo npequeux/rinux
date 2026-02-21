@@ -2,7 +2,7 @@
 //!
 //! Linux CFS-inspired scheduler with virtual runtime tracking.
 
-use super::task::{Task, Priority};
+use super::task::{Priority, Task};
 use crate::types::Pid;
 use alloc::collections::BTreeMap;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -64,7 +64,7 @@ fn priority_to_weight(priority: Priority) -> u64 {
     // Priority 0-39 => nice -20 to -1 (higher priority)
     // Priority 40-159 => nice 0 to +19 (normal to lower priority)
     // Priority 160-255 => nice +19 (lowest priority)
-    
+
     let nice = if priority < 120 {
         -20i32 + (priority as i32 * 40 / 120)
     } else {
@@ -96,6 +96,12 @@ pub struct CfsRunQueue {
     total_weight: u64,
     /// Current running task
     current: Option<(Pid, u64)>, // (pid, vruntime_key)
+}
+
+impl Default for CfsRunQueue {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CfsRunQueue {
@@ -140,7 +146,7 @@ impl CfsRunQueue {
         if let Some((vruntime, task)) = self.tasks.iter().next() {
             let vruntime = *vruntime;
             let task = task.clone();
-            
+
             self.tasks.remove(&vruntime);
             self.pid_to_vruntime.remove(&task.task.pid);
             self.total_weight = self.total_weight.saturating_sub(task.weight);
@@ -272,7 +278,7 @@ pub fn schedule() -> Option<Pid> {
     if let Some(next_task) = queue.dequeue_next() {
         let next_pid = next_task.task.pid;
         queue.current = Some((next_pid, next_task.vruntime));
-        
+
         // Re-enqueue for next scheduling
         queue.enqueue(next_task);
 
@@ -310,25 +316,25 @@ pub fn current_pid() -> Option<Pid> {
 /// Set CPU affinity for a task
 pub fn set_cpu_affinity(pid: Pid, cpu_mask: u64) -> Result<(), &'static str> {
     let mut queue = CFS_SCHEDULER.lock();
-    
+
     if let Some(vruntime) = queue.pid_to_vruntime.get(&pid).copied() {
         if let Some(task) = queue.tasks.get_mut(&vruntime) {
             task.cpu_affinity = cpu_mask;
             return Ok(());
         }
     }
-    
+
     Err("Task not found")
 }
 
 /// Check if task should be preempted
 pub fn should_preempt() -> bool {
     let queue = CFS_SCHEDULER.lock();
-    
+
     if let Some((_current_pid, current_vruntime)) = queue.current {
         // Check if current task has exceeded its time slice
         let runtime_ns = CURRENT_RUNTIME_NS.load(Ordering::Relaxed);
-        
+
         if let Some(current_task) = queue.tasks.get(&current_vruntime) {
             if runtime_ns >= current_task.time_slice {
                 return true;
@@ -344,7 +350,7 @@ pub fn should_preempt() -> bool {
             }
         }
     }
-    
+
     false
 }
 
@@ -357,7 +363,7 @@ mod tests {
         let weight_0 = priority_to_weight(0);
         let weight_120 = priority_to_weight(120);
         let weight_255 = priority_to_weight(255);
-        
+
         assert!(weight_0 > weight_120);
         assert!(weight_120 > weight_255);
     }
@@ -366,7 +372,7 @@ mod tests {
     fn test_cfs_task_creation() {
         let task = Task::new(1);
         let cfs_task = CfsTask::new(task);
-        
+
         assert_eq!(cfs_task.task.pid, 1);
         assert_eq!(cfs_task.vruntime, 0);
         assert!(cfs_task.weight > 0);
@@ -375,13 +381,13 @@ mod tests {
     #[test]
     fn test_cfs_runqueue_enqueue_dequeue() {
         let mut queue = CfsRunQueue::new();
-        
+
         let task1 = Task::new(1);
         let cfs_task1 = CfsTask::new(task1);
         queue.enqueue(cfs_task1);
-        
+
         assert_eq!(queue.len(), 1);
-        
+
         let dequeued = queue.dequeue_next();
         assert!(dequeued.is_some());
         assert_eq!(dequeued.unwrap().task.pid, 1);

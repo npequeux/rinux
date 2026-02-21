@@ -122,8 +122,8 @@ impl VMAllocator {
 
     /// Map virtual memory region to physical frames
     fn map_region(&mut self, virt_start: usize, size: usize) -> Result<(), ()> {
-        use crate::paging::{PageMapper, VirtAddr, PhysAddr};
-        
+        use crate::paging::{PageMapper, PhysAddr, VirtAddr};
+
         let num_pages = size / PAGE_SIZE;
         let mut mapper = unsafe { PageMapper::new() };
 
@@ -144,8 +144,7 @@ impl VMAllocator {
             // Map the page with kernel-only permissions (writable, not user)
             let virt = VirtAddr::new(virt_addr as u64);
             let phys = PhysAddr::new(frame.start_address());
-            mapper.map_page(virt, phys, true, false)
-                .map_err(|_| ())?;
+            mapper.map_page(virt, phys, true, false).map_err(|_| ())?;
         }
 
         Ok(())
@@ -154,7 +153,7 @@ impl VMAllocator {
     /// Unmap virtual memory region
     fn unmap_region(&mut self, virt_start: usize, size: usize) -> Result<(), ()> {
         use crate::paging::{PageMapper, VirtAddr};
-        
+
         let num_pages = size / PAGE_SIZE;
         let mut mapper = unsafe { PageMapper::new() };
 
@@ -226,7 +225,7 @@ pub unsafe fn vfree(ptr: *mut u8) {
 
 /// Check if address is in vmalloc range
 pub fn is_vmalloc_addr(addr: usize) -> bool {
-    addr >= VMALLOC_START && addr < VMALLOC_END
+    (VMALLOC_START..VMALLOC_END).contains(&addr)
 }
 
 #[cfg(test)]

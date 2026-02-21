@@ -2,9 +2,9 @@
 //!
 //! Handles out-of-memory situations by selecting and killing processes.
 
+use alloc::vec::Vec;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use spin::Mutex;
-use alloc::vec::Vec;
 
 /// OOM killer statistics
 static OOM_KILLS: AtomicU64 = AtomicU64::new(0);
@@ -45,7 +45,7 @@ impl ProcessOomInfo {
 struct OomKiller {
     enabled: bool,
     min_free_memory: u64, // Minimum free memory before OOM kicks in
-    _last_kill_time: u64,  // Timestamp of last kill
+    _last_kill_time: u64, // Timestamp of last kill
 }
 
 impl Default for OomKiller {
@@ -122,10 +122,10 @@ pub fn trigger_oom(free_memory: u64) -> Option<i32> {
     // TODO: Get actual process list from scheduler
     // For now, use a placeholder
     let processes = get_process_list();
-    
+
     if let Some(victim_pid) = killer.select_victim(&processes) {
         drop(killer); // Release lock before killing
-        
+
         // Kill the victim process
         if kill_process(victim_pid) {
             OOM_KILLS.fetch_add(1, Ordering::SeqCst);
@@ -151,7 +151,7 @@ fn kill_process(pid: i32) -> bool {
     // 2. Freeing all its memory
     // 3. Closing all its file descriptors
     // 4. Cleaning up any other resources
-    
+
     let _ = pid;
     false // Stub implementation
 }
@@ -172,7 +172,7 @@ pub fn is_under_memory_pressure() -> bool {
     let (total, _allocated, free) = crate::frame::get_stats();
     let total_bytes = total * 4096;
     let free_bytes = free * 4096;
-    
+
     if total_bytes == 0 {
         return false;
     }

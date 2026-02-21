@@ -74,6 +74,7 @@ unsafe impl GlobalAlloc for LockedAllocator {
     }
 }
 
+#[cfg(target_os = "none")]
 #[global_allocator]
 static ALLOCATOR: LockedAllocator = LockedAllocator(Mutex::new(BumpAllocator::new()));
 
@@ -83,7 +84,7 @@ pub fn init() {
     // For now, we assume it's available at HEAP_START
 }
 
-#[cfg(not(test))]
+#[cfg(all(not(test), target_os = "none"))]
 #[alloc_error_handler]
 fn alloc_error_handler(layout: Layout) -> ! {
     panic!("Allocation error: {:?}", layout);

@@ -2,9 +2,9 @@
 //!
 //! Virtual filesystem that exposes kernel objects (devices, drivers, etc.)
 
+use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
-use alloc::collections::BTreeMap;
 use spin::Mutex;
 
 /// Sysfs attribute read callback
@@ -70,7 +70,13 @@ impl Sysfs {
 
         // Kernel attributes
         self.create_directory("/sys/kernel");
-        self.add_attribute("/sys/kernel", "version", 0o444, Some(read_kernel_version), None);
+        self.add_attribute(
+            "/sys/kernel",
+            "version",
+            0o444,
+            Some(read_kernel_version),
+            None,
+        );
     }
 
     /// Create a directory entry
@@ -177,7 +183,7 @@ impl Sysfs {
     /// List entries in a directory
     pub fn list(&self, dir: &str) -> Result<Vec<String>, &'static str> {
         let entries = self.entries.lock();
-        
+
         // Check if directory exists
         if !entries.contains_key(dir) {
             return Err("Directory not found");

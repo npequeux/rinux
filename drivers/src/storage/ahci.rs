@@ -9,37 +9,37 @@ use alloc::string::String;
 #[repr(C)]
 pub struct AhciHba {
     // Generic Host Control
-    cap: u32,      // Host Capabilities
-    ghc: u32,      // Global Host Control
-    is: u32,       // Interrupt Status
-    pi: u32,       // Ports Implemented
-    vs: u32,       // Version
-    ccc_ctl: u32,  // Command Completion Coalescing Control
+    cap: u32,       // Host Capabilities
+    ghc: u32,       // Global Host Control
+    is: u32,        // Interrupt Status
+    pi: u32,        // Ports Implemented
+    vs: u32,        // Version
+    ccc_ctl: u32,   // Command Completion Coalescing Control
     ccc_ports: u32, // Command Completion Coalescing Ports
-    em_loc: u32,   // Enclosure Management Location
-    em_ctl: u32,   // Enclosure Management Control
-    cap2: u32,     // Host Capabilities Extended
-    bohc: u32,     // BIOS/OS Handoff Control and Status
+    em_loc: u32,    // Enclosure Management Location
+    em_ctl: u32,    // Enclosure Management Control
+    cap2: u32,      // Host Capabilities Extended
+    bohc: u32,      // BIOS/OS Handoff Control and Status
 }
 
 /// AHCI port registers
 #[repr(C)]
 pub struct AhciPort {
-    clb: u64,       // Command List Base Address
-    fb: u64,        // FIS Base Address
-    is: u32,        // Interrupt Status
-    ie: u32,        // Interrupt Enable
-    cmd: u32,       // Command and Status
+    clb: u64, // Command List Base Address
+    fb: u64,  // FIS Base Address
+    is: u32,  // Interrupt Status
+    ie: u32,  // Interrupt Enable
+    cmd: u32, // Command and Status
     _reserved0: u32,
-    tfd: u32,       // Task File Data
-    sig: u32,       // Signature
-    ssts: u32,      // Serial ATA Status
-    sctl: u32,      // Serial ATA Control
-    serr: u32,      // Serial ATA Error
-    sact: u32,      // Serial ATA Active
-    ci: u32,        // Command Issue
-    sntf: u32,      // Serial ATA Notification
-    fbs: u32,       // FIS-based Switching Control
+    tfd: u32,  // Task File Data
+    sig: u32,  // Signature
+    ssts: u32, // Serial ATA Status
+    sctl: u32, // Serial ATA Control
+    serr: u32, // Serial ATA Error
+    sact: u32, // Serial ATA Active
+    ci: u32,   // Command Issue
+    sntf: u32, // Serial ATA Notification
+    fbs: u32,  // FIS-based Switching Control
 }
 
 /// SATA device type
@@ -48,8 +48,8 @@ pub enum SataDeviceType {
     None,
     SATA,
     SATAPI,
-    PM,      // Port Multiplier
-    SEMB,    // Enclosure Management Bridge
+    PM,   // Port Multiplier
+    SEMB, // Enclosure Management Bridge
 }
 
 /// AHCI SATA device
@@ -81,11 +81,11 @@ impl AhciDevice {
         // 2. Send IDENTIFY command
         // 3. Parse IDENTIFY data to get sector count and features
         // 4. Set up command list and FIS structures
-        
+
         // For now, stub implementation
         self.device_type = SataDeviceType::SATA;
         self.sector_count = 0; // Unknown
-        
+
         Ok(())
     }
 
@@ -108,7 +108,7 @@ impl BlockDevice for AhciDevice {
         // 3. Issue command to port
         // 4. Wait for completion
         // 5. Copy data from DMA buffer to user buffer
-        
+
         // For now, return error
         let _ = (start_block, buffer);
         Err("Not implemented")
@@ -121,7 +121,7 @@ impl BlockDevice for AhciDevice {
 
         // TODO: Implement actual AHCI write
         // Similar to read but with WRITE DMA command
-        
+
         let _ = (start_block, buffer);
         Err("Not implemented")
     }
@@ -171,7 +171,7 @@ impl AhciController {
         // 3. Wait for reset to complete
         // 4. Enable interrupts (set GHC.IE)
         // 5. Probe all implemented ports
-        
+
         self.probe_ports()?;
         Ok(())
     }

@@ -2,9 +2,9 @@
 //!
 //! Different filesystem implementations
 
-pub mod tmpfs;
 pub mod procfs;
 pub mod sysfs;
+pub mod tmpfs;
 
 /// Initialize all filesystems
 pub fn init() {

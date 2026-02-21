@@ -72,15 +72,33 @@ impl Permissions {
     /// Convert to Unix mode
     pub fn to_mode(&self) -> u16 {
         let mut mode = 0u16;
-        if self.owner_read { mode |= 0o400; }
-        if self.owner_write { mode |= 0o200; }
-        if self.owner_exec { mode |= 0o100; }
-        if self.group_read { mode |= 0o040; }
-        if self.group_write { mode |= 0o020; }
-        if self.group_exec { mode |= 0o010; }
-        if self.others_read { mode |= 0o004; }
-        if self.others_write { mode |= 0o002; }
-        if self.others_exec { mode |= 0o001; }
+        if self.owner_read {
+            mode |= 0o400;
+        }
+        if self.owner_write {
+            mode |= 0o200;
+        }
+        if self.owner_exec {
+            mode |= 0o100;
+        }
+        if self.group_read {
+            mode |= 0o040;
+        }
+        if self.group_write {
+            mode |= 0o020;
+        }
+        if self.group_exec {
+            mode |= 0o010;
+        }
+        if self.others_read {
+            mode |= 0o004;
+        }
+        if self.others_write {
+            mode |= 0o002;
+        }
+        if self.others_exec {
+            mode |= 0o001;
+        }
         mode
     }
 }
@@ -210,9 +228,7 @@ impl Inode {
     /// Remove directory entry
     pub fn remove_entry(&mut self, name: &str) -> Result<InodeNumber, &'static str> {
         match &mut self.data {
-            InodeData::Directory(entries) => {
-                entries.remove(name).ok_or("Entry not found")
-            }
+            InodeData::Directory(entries) => entries.remove(name).ok_or("Entry not found"),
             _ => Err("Not a directory"),
         }
     }
@@ -220,9 +236,7 @@ impl Inode {
     /// Lookup directory entry
     pub fn lookup(&self, name: &str) -> Result<InodeNumber, &'static str> {
         match &self.data {
-            InodeData::Directory(entries) => {
-                entries.get(name).copied().ok_or("Entry not found")
-            }
+            InodeData::Directory(entries) => entries.get(name).copied().ok_or("Entry not found"),
             _ => Err("Not a directory"),
         }
     }
@@ -230,9 +244,7 @@ impl Inode {
     /// List directory entries
     pub fn list_entries(&self) -> Result<Vec<String>, &'static str> {
         match &self.data {
-            InodeData::Directory(entries) => {
-                Ok(entries.keys().cloned().collect())
-            }
+            InodeData::Directory(entries) => Ok(entries.keys().cloned().collect()),
             _ => Err("Not a directory"),
         }
     }
@@ -284,7 +296,10 @@ impl Tmpfs {
                     InodeData::Regular(d) => InodeData::Regular(d.clone()),
                     InodeData::Directory(d) => InodeData::Directory(d.clone()),
                     InodeData::Symlink(d) => InodeData::Symlink(d.clone()),
-                    InodeData::Device { major, minor } => InodeData::Device { major: *major, minor: *minor },
+                    InodeData::Device { major, minor } => InodeData::Device {
+                        major: *major,
+                        minor: *minor,
+                    },
                     InodeData::Empty => InodeData::Empty,
                 },
                 link_count: i.link_count,
@@ -296,12 +311,16 @@ impl Tmpfs {
     }
 
     /// Create a new file
-    pub fn create_file(&self, parent: InodeNumber, name: String) -> Result<InodeNumber, &'static str> {
+    pub fn create_file(
+        &self,
+        parent: InodeNumber,
+        name: String,
+    ) -> Result<InodeNumber, &'static str> {
         let inode_num = self.alloc_inode_number();
         let inode = Inode::new_file(inode_num);
 
         let mut inodes = self.inodes.lock();
-        
+
         // Add to parent directory
         if let Some(parent_inode) = inodes.get_mut(&parent) {
             parent_inode.add_entry(name, inode_num)?;
@@ -314,7 +333,11 @@ impl Tmpfs {
     }
 
     /// Create a new directory
-    pub fn create_directory(&self, parent: InodeNumber, name: String) -> Result<InodeNumber, &'static str> {
+    pub fn create_directory(
+        &self,
+        parent: InodeNumber,
+        name: String,
+    ) -> Result<InodeNumber, &'static str> {
         let inode_num = self.alloc_inode_number();
         let mut inode = Inode::new_directory(inode_num);
 
@@ -381,7 +404,7 @@ mod tests {
     fn test_tmpfs_creation() {
         let fs = Tmpfs::new();
         assert_eq!(fs.root(), Tmpfs::ROOT_INODE);
-        
+
         let root = fs.get_inode(fs.root()).unwrap();
         assert!(root.is_directory());
     }
@@ -390,7 +413,7 @@ mod tests {
     fn test_file_creation() {
         let fs = Tmpfs::new();
         let file_inode = fs.create_file(fs.root(), String::from("test.txt")).unwrap();
-        
+
         let file = fs.get_inode(file_inode).unwrap();
         assert_eq!(file.file_type, FileType::Regular);
         assert_eq!(file.size, 0);
@@ -399,11 +422,13 @@ mod tests {
     #[test]
     fn test_directory_creation() {
         let fs = Tmpfs::new();
-        let dir_inode = fs.create_directory(fs.root(), String::from("testdir")).unwrap();
-        
+        let dir_inode = fs
+            .create_directory(fs.root(), String::from("testdir"))
+            .unwrap();
+
         let dir = fs.get_inode(dir_inode).unwrap();
         assert!(dir.is_directory());
-        
+
         // Check . and .. entries
         assert_eq!(dir.lookup(".").unwrap(), dir_inode);
         assert_eq!(dir.lookup("..").unwrap(), fs.root());
@@ -412,12 +437,12 @@ mod tests {
     #[test]
     fn test_file_read_write() {
         let mut inode = Inode::new_file(1);
-        
+
         let write_data = b"Hello, World!";
         let written = inode.write(0, write_data).unwrap();
         assert_eq!(written, write_data.len());
         assert_eq!(inode.size, write_data.len() as u64);
-        
+
         let mut read_buffer = vec![0u8; write_data.len()];
         let read = inode.read(0, &mut read_buffer).unwrap();
         assert_eq!(read, write_data.len());

@@ -28,6 +28,12 @@ pub struct SignalHandlers {
     pending: SignalSet,
 }
 
+impl Default for SignalHandlers {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SignalHandlers {
     /// Create new signal handlers with defaults
     pub fn new() -> Self {

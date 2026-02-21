@@ -2,9 +2,9 @@
 //!
 //! Virtual filesystem that exposes process and system information
 
+use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
-use alloc::collections::BTreeMap;
 use spin::Mutex;
 
 /// Proc entry type

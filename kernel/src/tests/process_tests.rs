@@ -124,10 +124,14 @@ fn test_fork_memory_context() -> TestResult {
 
     // Verify memory regions are preserved
     match cloned {
-        Ok(ctx) if ctx.heap_start == mem_ctx.heap_start
-            && ctx.heap_end == mem_ctx.heap_end
-            && ctx.stack_start == mem_ctx.stack_start
-            && ctx.stack_end == mem_ctx.stack_end => TestResult::Pass,
+        Ok(ctx)
+            if ctx.heap_start == mem_ctx.heap_start
+                && ctx.heap_end == mem_ctx.heap_end
+                && ctx.stack_start == mem_ctx.stack_start
+                && ctx.stack_end == mem_ctx.stack_end =>
+        {
+            TestResult::Pass
+        }
         Ok(_) => TestResult::Fail("Memory context not properly cloned"),
         Err(_) => TestResult::Fail("Failed to clone memory context"),
     }
