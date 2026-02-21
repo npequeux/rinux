@@ -106,9 +106,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Memory safety maintained throughout
 
 ### Testing
-- 61 unit tests with 100% pass rate
-- Tests for memory allocation, string operations, and list structures
-- Driver-specific unit tests
+- 27 unit tests passing in rinux-lib (100% pass rate)
+- Tests for memory allocation utilities, string operations, and list structures
+- Additional tests exist in kernel and mm modules but require no_std test environment
 
 ## [0.1.0] - 2026-02-18
 
