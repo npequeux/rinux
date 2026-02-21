@@ -3,6 +3,39 @@
 //! Handles page faults and manages virtual memory.
 
 use crate::frame;
+use spin::Mutex;
+use alloc::collections::BTreeSet;
+
+/// Tracks which pages are marked as copy-on-write
+static COW_PAGES: Mutex<Option<BTreeSet<u64>>> = Mutex::new(None);
+
+/// Initialize COW tracking
+pub fn init_cow() {
+    let mut pages = COW_PAGES.lock();
+    *pages = Some(BTreeSet::new());
+}
+
+/// Mark a page as copy-on-write
+pub fn mark_cow(page_addr: u64) {
+    if let Some(ref mut pages) = *COW_PAGES.lock() {
+        pages.insert(page_addr & !0xFFF);
+    }
+}
+
+/// Unmark a page as copy-on-write
+pub fn unmark_cow(page_addr: u64) {
+    if let Some(ref mut pages) = *COW_PAGES.lock() {
+        pages.remove(&(page_addr & !0xFFF));
+    }
+}
+
+/// Check if a page is copy-on-write
+pub fn is_cow(page_addr: u64) -> bool {
+    COW_PAGES.lock()
+        .as_ref()
+        .map(|pages| pages.contains(&(page_addr & !0xFFF)))
+        .unwrap_or(false)
+}
 
 /// Page fault error code bits
 pub mod error_code {
@@ -130,7 +163,7 @@ fn handle_write_protection(fault_addr: u64, is_user: bool) -> Result<(), PageFau
     let page_addr = fault_addr & !0xFFF;
 
     // Check if this is a copy-on-write page
-    if is_copy_on_write(page_addr) {
+    if is_cow(page_addr) {
         // Allocate a new frame
         let new_frame = frame::allocate_frame().ok_or(PageFaultError::OutOfMemory)?;
 
@@ -139,6 +172,9 @@ fn handle_write_protection(fault_addr: u64, is_user: bool) -> Result<(), PageFau
 
         // Remap the page to the new frame with write permissions
         remap_page(page_addr, new_frame.start_address(), true, is_user)?;
+        
+        // Unmark as COW
+        unmark_cow(page_addr);
 
         Ok(())
     } else {
@@ -173,21 +209,39 @@ fn find_vma(addr: u64) -> Result<VMA, PageFaultError> {
 }
 
 /// Check if a page is marked copy-on-write
-fn is_copy_on_write(_page_addr: u64) -> bool {
-    // TODO: Track COW pages (could use page table software bits)
-    false
+fn is_copy_on_write(page_addr: u64) -> bool {
+    is_cow(page_addr)
 }
 
 /// Copy content from one page to another
 fn copy_page_content(src_virt: u64, dst_phys: u64) -> Result<(), PageFaultError> {
-    // TODO: Map destination physical page to temporary virtual address
-    // For now, this is a stub
-    // In a complete implementation:
-    // 1. Map dst_phys to a temporary virtual address
-    // 2. Copy from src_virt to temp virtual address
-    // 3. Unmap temporary virtual address
+    use crate::paging::{PageMapper, VirtAddr, PhysAddr};
     
-    let _ = (src_virt, dst_phys);
+    // Map destination physical page to a temporary virtual address
+    // Use a high virtual address that's unlikely to conflict
+    const TEMP_MAP_ADDR: u64 = 0xFFFF_FFFF_FFFF_0000;
+    
+    let mut mapper = unsafe { PageMapper::new() };
+    let temp_virt = VirtAddr::new(TEMP_MAP_ADDR);
+    let dst_phys_addr = PhysAddr::new(dst_phys);
+    
+    // Map temporary address to destination physical frame
+    mapper.map_page(temp_virt, dst_phys_addr, true, false)
+        .map_err(|_| PageFaultError::PageTableError)?;
+    
+    // Copy data from source to destination
+    unsafe {
+        let src_ptr = src_virt as *const u8;
+        let dst_ptr = TEMP_MAP_ADDR as *mut u8;
+        core::ptr::copy_nonoverlapping(src_ptr, dst_ptr, 4096);
+    }
+    
+    // Unmap temporary address
+    mapper.unmap_page(temp_virt)
+        .map_err(|_| PageFaultError::PageTableError)?;
+    
+    // Note: We don't deallocate the frame from unmapping since it's our new frame
+    
     Ok(())
 }
 
@@ -198,20 +252,14 @@ fn map_page(
     writable: bool,
     user: bool,
 ) -> Result<(), PageFaultError> {
-    // This would use the architecture-specific paging module
-    // For now, this is a stub that will be integrated with arch/x86/paging.rs
-    let _ = (virt_addr, phys_addr, writable, user);
-
-    // TODO: Integrate with rinux_arch_x86::paging::PageMapper
-    // let mut mapper = unsafe { PageMapper::new() };
-    // let virt = VirtAddr::new(virt_addr);
-    // let phys = PhysAddr::new(phys_addr);
-    // let mut flags = PageTableFlags::PRESENT;
-    // if writable { flags |= PageTableFlags::WRITABLE; }
-    // if user { flags |= PageTableFlags::USER_ACCESSIBLE; }
-    // mapper.map_page(virt, phys, flags)?;
-
-    Ok(())
+    use crate::paging::{PageMapper, VirtAddr, PhysAddr};
+    
+    let mut mapper = unsafe { PageMapper::new() };
+    let virt = VirtAddr::new(virt_addr);
+    let phys = PhysAddr::new(phys_addr);
+    
+    mapper.map_page(virt, phys, writable, user)
+        .map_err(|_| PageFaultError::PageTableError)
 }
 
 /// Remap an existing page to a new physical frame
@@ -221,8 +269,15 @@ fn remap_page(
     writable: bool,
     user: bool,
 ) -> Result<(), PageFaultError> {
-    // Unmap old page
-    // TODO: unmap_page(virt_addr)?;
+    use crate::paging::{PageMapper, VirtAddr, PhysAddr};
+    
+    let mut mapper = unsafe { PageMapper::new() };
+    let virt = VirtAddr::new(virt_addr);
+    
+    // Unmap old page and deallocate frame
+    if let Ok(old_frame) = mapper.unmap_page(virt) {
+        frame::deallocate_frame(old_frame);
+    }
 
     // Map to new frame
     map_page(virt_addr, phys_addr, writable, user)
@@ -251,6 +306,9 @@ pub enum PageFaultError {
 pub fn init() {
     // Register page fault handler in IDT (Interrupt Descriptor Table)
     // This is done by the interrupt subsystem
+    
+    // Initialize COW tracking
+    init_cow();
 }
 
 #[cfg(test)]
