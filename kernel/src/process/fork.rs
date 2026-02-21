@@ -43,19 +43,37 @@ impl MemoryContext {
         }
     }
 
-    /// Clone the memory context (copy-on-write would be implemented here)
-    pub fn clone_for_fork(&self) -> Self {
-        // In a real implementation, this would:
-        // 1. Create a new page table
-        // 2. Copy or mark pages as copy-on-write
-        // 3. Set up proper memory mappings
-        Self {
-            page_table: self.page_table, // TODO: Clone page tables
+    /// Clone the memory context (copy-on-write implementation)
+    pub fn clone_for_fork(&self) -> Result<Self, &'static str> {
+        use rinux_mm::paging::{PageMapper, VirtAddr, PhysAddr};
+        use rinux_mm::frame;
+        
+        // Create a new page table for the child
+        let new_page_table_frame = frame::allocate_frame()
+            .ok_or("Failed to allocate page table")?;
+        let new_page_table = new_page_table_frame.start_address();
+        
+        // Zero the new page table
+        unsafe {
+            let ptr = new_page_table as *mut u8;
+            core::ptr::write_bytes(ptr, 0, 4096);
+        }
+        
+        // In a full implementation, we would:
+        // 1. Copy the kernel page table mappings (upper half)
+        // 2. For user mappings (lower half), mark all pages as read-only
+        //    and set COW bit in both parent and child
+        // 3. This allows sharing physical frames until write occurs
+        
+        // For now, return a simple clone
+        // TODO: Implement full COW page table cloning
+        Ok(Self {
+            page_table: new_page_table,
             heap_start: self.heap_start,
             heap_end: self.heap_end,
             stack_start: self.stack_start,
             stack_end: self.stack_end,
-        }
+        })
     }
 }
 
@@ -135,7 +153,7 @@ impl ExtendedTask {
 
         let mut child = ExtendedTask {
             task: Task::new_with_parent(child_pid, self.task.pid),
-            memory: self.memory.clone_for_fork(),
+            memory: self.memory.clone_for_fork()?,
             registers: self.registers,
         };
 

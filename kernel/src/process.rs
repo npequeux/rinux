@@ -7,3 +7,4 @@ pub mod fork;
 pub mod pid;
 pub mod sched;
 pub mod task;
+pub mod wait;

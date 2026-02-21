@@ -90,10 +90,10 @@ fn test_fork_basic() -> TestResult {
 
     // Test memory context cloning
     let cloned = mem_ctx.clone_for_fork();
-    if cloned.heap_start == mem_ctx.heap_start {
-        TestResult::Pass
-    } else {
-        TestResult::Fail("Memory context clone failed")
+    match cloned {
+        Ok(ctx) if ctx.heap_start == mem_ctx.heap_start => TestResult::Pass,
+        Ok(_) => TestResult::Fail("Memory context clone values incorrect"),
+        Err(_) => TestResult::Fail("Memory context clone failed"),
     }
 }
 
@@ -124,14 +124,13 @@ fn test_fork_memory_context() -> TestResult {
     let cloned = mem_ctx.clone_for_fork();
 
     // Verify memory regions are preserved
-    if cloned.heap_start == mem_ctx.heap_start
-        && cloned.heap_end == mem_ctx.heap_end
-        && cloned.stack_start == mem_ctx.stack_start
-        && cloned.stack_end == mem_ctx.stack_end
-    {
-        TestResult::Pass
-    } else {
-        TestResult::Fail("Memory context not properly cloned")
+    match cloned {
+        Ok(ctx) if ctx.heap_start == mem_ctx.heap_start
+            && ctx.heap_end == mem_ctx.heap_end
+            && ctx.stack_start == mem_ctx.stack_start
+            && ctx.stack_end == mem_ctx.stack_end => TestResult::Pass,
+        Ok(_) => TestResult::Fail("Memory context not properly cloned"),
+        Err(_) => TestResult::Fail("Failed to clone memory context"),
     }
 }
 
