@@ -6,7 +6,7 @@ pub mod timer;
 
 pub use timer::{Timer, TimerId};
 
-use core::sync::atomic::{AtomicU64, AtomicBool, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 /// System uptime in milliseconds
 static UPTIME_MS: AtomicU64 = AtomicU64::new(0);

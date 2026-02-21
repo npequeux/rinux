@@ -4,15 +4,13 @@
 //! Inspired by the Linux kernel SLUB allocator.
 
 use core::alloc::{GlobalAlloc, Layout};
-use core::ptr::{null_mut, NonNull};
 use core::mem;
+use core::ptr::{null_mut, NonNull};
 use spin::Mutex;
 
 /// Size classes for the slab allocator
 /// These are common allocation sizes in the kernel
-const SIZE_CLASSES: &[usize] = &[
-    8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096,
-];
+const SIZE_CLASSES: &[usize] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
 
 /// Number of size classes
 const NUM_SIZE_CLASSES: usize = SIZE_CLASSES.len();
@@ -151,7 +149,7 @@ impl SlabAllocator {
         for i in 0..NUM_SIZE_CLASSES {
             slab_memories[i] = self.allocate_slab_memory();
         }
-        
+
         // Initialize each slab with its allocated memory
         for (i, slab) in self.size_classes.iter_mut().enumerate() {
             if let Some(memory) = slab_memories[i] {
@@ -174,7 +172,9 @@ impl SlabAllocator {
     /// Find the appropriate size class for a layout
     fn size_class_for(&self, layout: &Layout) -> Option<usize> {
         let size = layout.size().max(layout.align());
-        SIZE_CLASSES.iter().position(|&class_size| class_size >= size)
+        SIZE_CLASSES
+            .iter()
+            .position(|&class_size| class_size >= size)
     }
 
     /// Allocate memory
@@ -288,13 +288,25 @@ mod tests {
     #[test]
     fn test_size_class_selection() {
         let allocator = SlabAllocator::new();
-        
+
         // Test exact matches
-        assert_eq!(allocator.size_class_for(&Layout::from_size_align(8, 8).unwrap()), Some(0));
-        assert_eq!(allocator.size_class_for(&Layout::from_size_align(16, 16).unwrap()), Some(1));
-        
+        assert_eq!(
+            allocator.size_class_for(&Layout::from_size_align(8, 8).unwrap()),
+            Some(0)
+        );
+        assert_eq!(
+            allocator.size_class_for(&Layout::from_size_align(16, 16).unwrap()),
+            Some(1)
+        );
+
         // Test sizes that need rounding up
-        assert_eq!(allocator.size_class_for(&Layout::from_size_align(9, 8).unwrap()), Some(1));
-        assert_eq!(allocator.size_class_for(&Layout::from_size_align(100, 8).unwrap()), Some(4));
+        assert_eq!(
+            allocator.size_class_for(&Layout::from_size_align(9, 8).unwrap()),
+            Some(1)
+        );
+        assert_eq!(
+            allocator.size_class_for(&Layout::from_size_align(100, 8).unwrap()),
+            Some(4)
+        );
     }
 }

@@ -20,19 +20,19 @@ pub enum ExecutableFormat {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ElfHeader {
-    pub magic: [u8; 4],        // 0x7F, 'E', 'L', 'F'
-    pub class: u8,             // 1 = 32-bit, 2 = 64-bit
-    pub data: u8,              // 1 = little endian, 2 = big endian
+    pub magic: [u8; 4], // 0x7F, 'E', 'L', 'F'
+    pub class: u8,      // 1 = 32-bit, 2 = 64-bit
+    pub data: u8,       // 1 = little endian, 2 = big endian
     pub version: u8,
     pub os_abi: u8,
     pub abi_version: u8,
     pub padding: [u8; 7],
-    pub etype: u16,            // 1 = relocatable, 2 = executable, 3 = shared
-    pub machine: u16,          // 0x3E = x86_64
+    pub etype: u16,   // 1 = relocatable, 2 = executable, 3 = shared
+    pub machine: u16, // 0x3E = x86_64
     pub version2: u32,
-    pub entry: u64,            // Entry point address
-    pub phoff: u64,            // Program header offset
-    pub shoff: u64,            // Section header offset
+    pub entry: u64, // Entry point address
+    pub phoff: u64, // Program header offset
+    pub shoff: u64, // Section header offset
     pub flags: u32,
     pub ehsize: u16,
     pub phentsize: u16,
@@ -46,13 +46,13 @@ pub struct ElfHeader {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ProgramHeader {
-    pub ptype: u32,            // Segment type
+    pub ptype: u32, // Segment type
     pub flags: u32,
-    pub offset: u64,           // File offset
-    pub vaddr: u64,            // Virtual address
-    pub paddr: u64,            // Physical address
-    pub filesz: u64,           // Size in file
-    pub memsz: u64,            // Size in memory
+    pub offset: u64, // File offset
+    pub vaddr: u64,  // Virtual address
+    pub paddr: u64,  // Physical address
+    pub filesz: u64, // Size in file
+    pub memsz: u64,  // Size in memory
     pub align: u64,
 }
 
@@ -199,7 +199,7 @@ mod tests {
         data[3] = b'F';
         data[4] = 2; // 64-bit
         data[5] = 1; // little endian
-        // Set machine to x86_64 (0x3E) at offset 18-19
+                     // Set machine to x86_64 (0x3E) at offset 18-19
         data[18] = 0x3E;
         data[19] = 0x00;
 
