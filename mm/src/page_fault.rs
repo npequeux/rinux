@@ -149,7 +149,7 @@ fn handle_demand_paging(
         return Err(PageFaultError::InstructionFetch);
     }
 
-    /// Allocate a physical frame
+    // Allocate a physical frame
     let frame = frame::allocate_frame().ok_or(PageFaultError::OutOfMemory)?;
 
     // Note: Physical frames need to be identity-mapped or mapped to a virtual
@@ -283,7 +283,7 @@ fn remap_page(
     writable: bool,
     user: bool,
 ) -> Result<(), PageFaultError> {
-    use crate::paging::{PageMapper, VirtAddr, PhysAddr};
+    use crate::paging::{PageMapper, VirtAddr};
     
     let mut mapper = unsafe { PageMapper::new() };
     let virt = VirtAddr::new(virt_addr);

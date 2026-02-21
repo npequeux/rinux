@@ -3,12 +3,11 @@
 //! Low-level system call handling for x86_64 using the syscall instruction.
 
 use core::arch::asm;
-use rinux_kernel as kernel;
 
 /// MSR addresses for syscall/sysret
 const MSR_STAR: u32 = 0xC0000081; // CS/SS selectors for syscall/sysret
 const MSR_LSTAR: u32 = 0xC0000082; // 64-bit mode syscall target
-const MSR_CSTAR: u32 = 0xC0000083; // Compatibility mode syscall target
+const _MSR_CSTAR: u32 = 0xC0000083; // Compatibility mode syscall target
 const MSR_SFMASK: u32 = 0xC0000084; // Flag mask for syscall
 
 /// System call frame (saved registers)
@@ -40,7 +39,7 @@ pub struct SyscallFrame {
 pub fn init() {
     unsafe {
         // Set up syscall entry point
-        write_msr(MSR_LSTAR, syscall_entry as u64);
+        write_msr(MSR_LSTAR, syscall_entry as *const () as u64);
 
         // Set up segment selectors
         // STAR[63:48] = kernel CS (0x08), SS (0x10)

@@ -37,10 +37,10 @@ const PAGE_SIZE: usize = 4096;
 /// Memory mapping region
 #[derive(Debug, Clone, Copy)]
 struct MappedRegion {
-    start: usize,
+    _start: usize,
     size: usize,
-    prot: i32,
-    flags: i32,
+    _prot: i32,
+    _flags: i32,
 }
 
 /// Memory mapper
@@ -176,10 +176,10 @@ impl MemoryMapper {
 
         // Record the mapping
         let region = MappedRegion {
-            start: map_addr,
+            _start: map_addr,
             size: aligned_size,
-            prot,
-            flags,
+            _prot: prot,
+            _flags: flags,
         };
         self.regions.insert(map_addr, region);
 

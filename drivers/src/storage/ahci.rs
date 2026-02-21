@@ -55,10 +55,10 @@ pub enum SataDeviceType {
 /// AHCI SATA device
 pub struct AhciDevice {
     name: String,
-    port: usize,
+    _port: usize,
     device_type: SataDeviceType,
     sector_count: u64,
-    base_address: u64,
+    _base_address: u64,
 }
 
 impl AhciDevice {
@@ -66,10 +66,10 @@ impl AhciDevice {
     pub fn new(port: usize, base_address: u64) -> Self {
         AhciDevice {
             name: alloc::format!("sd{}", (b'a' + port as u8) as char),
-            port,
+            _port: port,
             device_type: SataDeviceType::None,
             sector_count: 0,
-            base_address,
+            _base_address: base_address,
         }
     }
 

@@ -10,7 +10,7 @@ pub type ShmId = usize;
 
 /// Shared memory segment
 pub struct SharedMemorySegment {
-    id: ShmId,
+    _id: ShmId,
     size: usize,
     data: Vec<u8>,
     attached_count: usize,
@@ -20,7 +20,7 @@ impl SharedMemorySegment {
     /// Create a new shared memory segment
     pub fn new(id: ShmId, size: usize) -> Self {
         SharedMemorySegment {
-            id,
+            _id: id,
             size,
             data: alloc::vec![0u8; size],
             attached_count: 0,

@@ -274,8 +274,8 @@ pub fn handle_syscall(
             let fd = _arg5 as i32;
             let offset = _arg6;
 
-            // Use mm crate's mmap
-            match mm::mmap::mmap(addr, length, prot, flags, fd, offset) {
+            // Use rinux_mm crate's mmap
+            match rinux_mm::mmap::mmap(addr, length, prot, flags, fd, offset) {
                 Ok(mapped_addr) => Ok(mapped_addr),
                 Err(_) => Err(errno::ENOMEM),
             }
@@ -285,8 +285,8 @@ pub fn handle_syscall(
             let addr = arg1;
             let length = arg2;
 
-            // Use mm crate's munmap
-            match mm::mmap::munmap(addr, length) {
+            // Use rinux_mm crate's munmap
+            match rinux_mm::mmap::munmap(addr, length) {
                 Ok(()) => Ok(0),
                 Err(_) => Err(errno::EINVAL),
             }
@@ -297,8 +297,8 @@ pub fn handle_syscall(
             let length = arg2;
             let prot = arg3 as i32;
 
-            // Use mm crate's mprotect
-            match mm::mmap::mprotect(addr, length, prot) {
+            // Use rinux_mm crate's mprotect
+            match rinux_mm::mmap::mprotect(addr, length, prot) {
                 Ok(()) => Ok(0),
                 Err(_) => Err(errno::EINVAL),
             }
@@ -321,7 +321,7 @@ pub fn handle_syscall(
             // TODO: Implement fstat
             Err(errno::ENOSYS)
         }
-        SyscallNumber::Unknown | _ => {
+        SyscallNumber::Unknown => {
             crate::printk::printk("Unknown syscall: ");
             // TODO: Print syscall number
             crate::printk::printk("\n");

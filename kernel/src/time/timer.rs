@@ -14,7 +14,7 @@ pub type TimerCallback = fn();
 
 /// Timer structure
 pub struct Timer {
-    id: TimerId,
+    _id: TimerId,
     expires_at: u64,
     callback: TimerCallback,
     periodic: bool,
@@ -25,7 +25,7 @@ impl Timer {
     /// Create a new timer
     pub fn new(id: TimerId, expires_at: u64, callback: TimerCallback) -> Self {
         Timer {
-            id,
+            _id: id,
             expires_at,
             callback,
             periodic: false,
@@ -37,7 +37,7 @@ impl Timer {
     pub fn new_periodic(id: TimerId, interval: u64, callback: TimerCallback) -> Self {
         let expires_at = super::uptime_ms() + interval;
         Timer {
-            id,
+            _id: id,
             expires_at,
             callback,
             periodic: true,

@@ -2,7 +2,7 @@
 //!
 //! Handles page faults with full page table walking and allocation.
 
-use crate::frame::{allocate_frame, FrameAllocator};
+use crate::frame::allocate_frame;
 use core::ptr;
 
 /// Page table entry flags

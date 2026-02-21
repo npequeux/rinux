@@ -197,7 +197,7 @@ impl VNode for Ext2VNode {
 
         // Verify this is a directory
         if inode.i_mode & 0xF000 != 0x4000 {
-            return Err(FsError::NotDir);
+            return Err(FsError::NotADirectory);
         }
 
         let mut entries = Vec::new();
@@ -262,8 +262,6 @@ impl VNode for Ext2VNode {
         }
 
         Ok(entries)
-    }
-        Err(FsError::IoError)
     }
 
     fn lookup(&self, _name: &str) -> Result<Arc<dyn VNode>, FsError> {

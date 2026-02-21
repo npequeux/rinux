@@ -9,6 +9,7 @@ extern crate alloc;
 pub mod fs;
 pub mod init;
 pub mod ipc;
+pub mod net;
 pub mod panic;
 pub mod printk;
 pub mod process;
@@ -53,6 +54,9 @@ pub fn init() {
 
     // Initialize IPC
     ipc::init();
+
+    // Initialize network subsystem
+    net::init();
 
     // Initialize scheduler
     process::sched::init();

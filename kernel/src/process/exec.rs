@@ -208,7 +208,7 @@ pub fn load_elf(data: &[u8]) -> Result<ExecContext, &'static str> {
             // Determine permissions from segment flags
             // PF_X = 1, PF_W = 2, PF_R = 4
             let writable = (segment.flags & 2) != 0;
-            let executable = (segment.flags & 1) != 0;
+            let _executable = (segment.flags & 1) != 0;
             
             // Map the page (user-accessible)
             mapper.map_page(

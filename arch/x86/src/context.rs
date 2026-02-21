@@ -2,8 +2,6 @@
 //!
 //! Low-level context switching implementation for x86_64.
 
-use core::arch::asm;
-
 /// CPU context for context switching
 #[derive(Clone, Copy)]
 #[repr(C)]

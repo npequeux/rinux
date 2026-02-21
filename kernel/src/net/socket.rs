@@ -1,4 +1,4 @@
-//! Socket Layér
+//! Socket Layer
 //!
 //! BSD socket API implementation for Rinux
 
@@ -328,62 +328,74 @@ pub fn socket(domain: SocketDomain, socket_type: SocketType, protocol: SocketPro
 /// Bind socket to address
 pub fn bind(fd: i32, addr: SocketAddr) -> Result<(), SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().bind(addr)
+    let result = socket.lock().bind(addr);
+    result
 }
 
 /// Listen for connections
 pub fn listen(fd: i32, backlog: u32) -> Result<(), SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().listen(backlog)
+    let result = socket.lock().listen(backlog);
+    result
 }
 
 /// Accept incoming connection
 pub fn accept(fd: i32) -> Result<i32, SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    let new_socket = socket.lock().accept()?;
+    let new_socket = {
+        let mut sock = socket.lock();
+        sock.accept()?
+    };
     Ok(SOCKET_TABLE.lock().add(new_socket))
 }
 
 /// Connect to remote address
 pub fn connect(fd: i32, addr: SocketAddr) -> Result<(), SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().connect(addr)
+    let result = socket.lock().connect(addr);
+    result
 }
 
 /// Send data
 pub fn send(fd: i32, data: &[u8], flags: u32) -> Result<usize, SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().send(data, flags)
+    let result = socket.lock().send(data, flags);
+    result
 }
 
 /// Receive data
 pub fn recv(fd: i32, buffer: &mut [u8], flags: u32) -> Result<usize, SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().recv(buffer, flags)
+    let result = socket.lock().recv(buffer, flags);
+    result
 }
 
 /// Send data to specific address
 pub fn sendto(fd: i32, data: &[u8], addr: SocketAddr, flags: u32) -> Result<usize, SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().sendto(data, addr, flags)
+    let result = socket.lock().sendto(data, addr, flags);
+    result
 }
 
 /// Receive data with source address
 pub fn recvfrom(fd: i32, buffer: &mut [u8], flags: u32) -> Result<(usize, SocketAddr), SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().recvfrom(buffer, flags)
+    let result = socket.lock().recvfrom(buffer, flags);
+    result
 }
 
 /// Shutdown socket
 pub fn shutdown(fd: i32, how: ShutdownHow) -> Result<(), SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().shutdown(how)
+    let result = socket.lock().shutdown(how);
+    result
 }
 
 /// Close socket
 pub fn close_socket(fd: i32) -> Result<(), SocketError> {
     let socket = SOCKET_TABLE.lock().remove(fd).ok_or(SocketError::InvalidArg)?;
-    socket.lock().close()
+    let result = socket.lock().close();
+    result
 }
 
 /// Initialize socket subsystem

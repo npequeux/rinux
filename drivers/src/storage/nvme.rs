@@ -113,7 +113,7 @@ impl NvmeNamespace {
 pub struct NvmeDevice {
     name: String,
     namespace: NvmeNamespace,
-    base_address: u64,
+    _base_address: u64,
 }
 
 impl NvmeDevice {
@@ -122,7 +122,7 @@ impl NvmeDevice {
         NvmeDevice {
             name: alloc::format!("nvme{}n{}", 0, namespace_id),
             namespace: NvmeNamespace::new(namespace_id),
-            base_address,
+            _base_address: base_address,
         }
     }
 
@@ -180,7 +180,7 @@ impl BlockDevice for NvmeDevice {
 
 /// NVMe controller
 pub struct NvmeController {
-    base_address: u64,
+    _base_address: u64,
     namespaces: alloc::vec::Vec<NvmeNamespace>,
 }
 
@@ -188,7 +188,7 @@ impl NvmeController {
     /// Create a new NVMe controller
     pub fn new(base_address: u64) -> Self {
         NvmeController {
-            base_address,
+            _base_address: base_address,
             namespaces: alloc::vec::Vec::new(),
         }
     }

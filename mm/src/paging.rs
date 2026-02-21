@@ -2,7 +2,7 @@
 //!
 //! Higher-level paging operations on top of architecture-specific code.
 
-use crate::frame::{Frame, allocate_frame, deallocate_frame};
+use crate::frame::{Frame, allocate_frame};
 use core::sync::atomic::{AtomicBool, Ordering};
 use spin::Mutex;
 

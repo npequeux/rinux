@@ -149,7 +149,7 @@ pub fn init() {
 /// Schedule next task
 pub fn schedule() {
     let mut sched = SCHEDULER.lock();
-    if let Some(next_pid) = sched.schedule_next() {
+    if let Some(_next_pid) = sched.schedule_next() {
         // TODO: Perform actual context switch using arch-specific code
         // For now, we're updating the scheduler state
         // In a complete implementation, this would:

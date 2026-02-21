@@ -169,7 +169,7 @@ pub fn set_min_free_memory(bytes: u64) {
 
 /// Check if system is under memory pressure
 pub fn is_under_memory_pressure() -> bool {
-    let (total, allocated, free) = crate::frame::get_stats();
+    let (total, _allocated, free) = crate::frame::get_stats();
     let total_bytes = total * 4096;
     let free_bytes = free * 4096;
     

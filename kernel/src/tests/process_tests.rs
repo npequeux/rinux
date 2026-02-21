@@ -16,6 +16,7 @@ enum TestResult {
 }
 
 impl TestResult {
+    #[allow(dead_code)]
     fn is_pass(&self) -> bool {
         matches!(self, TestResult::Pass)
     }
