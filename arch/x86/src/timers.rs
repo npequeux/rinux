@@ -15,9 +15,12 @@ static mut HPET_BASE: Option<u64> = None;
 mod hpet_reg {
     pub const GENERAL_CAPS: usize = 0x000;
     pub const GENERAL_CONFIG: usize = 0x010;
+    #[allow(dead_code)]
     pub const GENERAL_INT_STATUS: usize = 0x020;
     pub const MAIN_COUNTER: usize = 0x0F0;
+    #[allow(dead_code)]
     pub const TIMER0_CONFIG: usize = 0x100;
+    #[allow(dead_code)]
     pub const TIMER0_COMPARATOR: usize = 0x108;
 }
 
@@ -229,12 +232,10 @@ fn find_hpet_base() -> Option<u64> {
 /// Get HPET frequency (in femtoseconds per tick)
 pub fn get_hpet_period() -> Option<u64> {
     unsafe {
-        if HPET_BASE.is_some() {
+        HPET_BASE.map(|_| {
             let caps = read_hpet(hpet_reg::GENERAL_CAPS);
-            Some(caps >> 32) // Period in femtoseconds
-        } else {
-            None
-        }
+            caps >> 32 // Period in femtoseconds
+        })
     }
 }
 

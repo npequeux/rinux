@@ -60,6 +60,7 @@ const IA32_APIC_BASE: u32 = 0x1B;
 /// APIC Base MSR flags
 const APIC_BASE_ENABLE: u64 = 1 << 11;
 const APIC_BASE_X2APIC: u64 = 1 << 10;
+#[allow(dead_code)]
 const APIC_BASE_BSP: u64 = 1 << 8;
 
 /// APIC mode

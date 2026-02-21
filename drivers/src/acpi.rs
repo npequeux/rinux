@@ -105,6 +105,12 @@ pub struct AcpiInfo {
     pub pm_profile: PmProfile,
 }
 
+impl Default for AcpiInfo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AcpiInfo {
     pub const fn new() -> Self {
         Self {
@@ -148,8 +154,8 @@ unsafe fn search_rsdp(start: usize, length: usize) -> Option<u64> {
 
         // Check signature
         let mut matches = true;
-        for i in 0..8 {
-            if ptr.add(i).read() != RSDP_SIGNATURE[i] {
+        for (i, &expected_byte) in RSDP_SIGNATURE.iter().enumerate().take(8) {
+            if ptr.add(i).read() != expected_byte {
                 matches = false;
                 break;
             }
@@ -158,7 +164,7 @@ unsafe fn search_rsdp(start: usize, length: usize) -> Option<u64> {
         if matches {
             // Verify checksum
             let rsdp_ptr = addr as *const Rsdp;
-            let rsdp = ptr::read(rsdp_ptr);
+            let _rsdp = ptr::read(rsdp_ptr);
 
             let mut sum: u8 = 0;
             for i in 0..core::mem::size_of::<Rsdp>() {
@@ -217,7 +223,7 @@ pub fn init() {
 }
 
 /// Read power management profile from FADT
-unsafe fn read_pm_profile(rsdp: &Rsdp) -> Option<PmProfile> {
+unsafe fn read_pm_profile(_rsdp: &Rsdp) -> Option<PmProfile> {
     // This is a simplified version - would need to parse RSDT/XSDT
     // and find the FADT table
 
@@ -226,6 +232,7 @@ unsafe fn read_pm_profile(rsdp: &Rsdp) -> Option<PmProfile> {
 }
 
 /// Get ACPI info
+#[allow(static_mut_refs)]
 pub fn get_info() -> &'static AcpiInfo {
     unsafe { &ACPI_INFO }
 }
