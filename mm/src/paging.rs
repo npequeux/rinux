@@ -20,6 +20,20 @@ pub mod tlb {
     static TLB_FLUSH_REQUEST: Mutex<Option<TlbFlushRequest>> = Mutex::new(None);
 
     /// Initiate a TLB shootdown for all CPUs
+    ///
+    /// # SMP Limitations
+    ///
+    /// **IMPORTANT**: Currently only flushes the local CPU's TLB.
+    /// In a multi-core system, other CPUs may still have stale TLB entries.
+    /// 
+    /// For proper SMP TLB coherency, the following must be implemented:
+    /// 1. Inter-Processor Interrupts (IPI) mechanism via APIC
+    /// 2. TLB shootdown IPI vector and handler on all CPUs
+    /// 3. Acknowledgment tracking to ensure all CPUs completed the flush
+    ///
+    /// Until SMP support is complete, this function is only safe on single-CPU systems.
+    ///
+    /// TODO: Implement IPI-based TLB shootdown for SMP systems
     pub fn shootdown_all(virt_addr: u64) {
         let mut request = TLB_FLUSH_REQUEST.lock();
         *request = Some(TlbFlushRequest {
@@ -37,6 +51,13 @@ pub mod tlb {
     }
 
     /// Flush entire TLB on all CPUs
+    ///
+    /// # SMP Limitations
+    ///
+    /// **IMPORTANT**: Currently only flushes the local CPU's TLB.
+    /// See `shootdown_all()` documentation for details on SMP limitations.
+    ///
+    /// TODO: Send IPI to all other CPUs
     pub fn shootdown_full() {
         let mut request = TLB_FLUSH_REQUEST.lock();
         *request = Some(TlbFlushRequest {

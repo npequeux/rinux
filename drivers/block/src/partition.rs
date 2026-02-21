@@ -238,8 +238,116 @@ pub fn parse_mbr(device: Arc<dyn BlockDevice>) -> Result<Vec<Partition>, &'stati
 
 /// Scan all block devices for partitions
 pub fn scan_all() {
-    // This would iterate through all registered block devices
-    // and parse their partition tables
+    // Get number of registered block devices
+    let device_count = crate::device_count();
+    
+    // Scan each device for partitions
+    for i in 0..device_count {
+        if let Some(device) = crate::get_device(i) {
+            if let Err(e) = scan_device(device) {
+                // Log error (would use printk in full implementation)
+                let _ = e; // Suppress unused variable warning
+            }
+        }
+    }
+}
+
+/// Scan a single block device for partitions
+fn scan_device(device: Arc<dyn BlockDevice>) -> Result<(), &'static str> {
+    // Read first sector to check for partition table
+    let mut buffer = vec![0u8; 512];
+    
+    // Try to read first sector
+    if device.read(0, &mut buffer).is_err() {
+        return Err("Failed to read device");
+    }
+    
+    // Check for GPT signature
+    if is_gpt(&buffer) {
+        let _ = parse_gpt_partitions(device)?;
+    } else if is_mbr(&buffer) {
+        let _ = parse_mbr_partitions(device)?;
+    }
+    
+    Ok(())
+}
+
+/// Parse GPT partitions from a device
+fn parse_gpt_partitions(device: Arc<dyn BlockDevice>) -> Result<Vec<Partition>, &'static str> {
+    let gpt_header = read_gpt_header(device.clone())?;
+    let mut partitions = Vec::new();
+    
+    // Calculate number of partition entries
+    let entry_count = gpt_header.num_partition_entries.min(128); // Safety limit
+    
+    // Read partition entries
+    for i in 0..entry_count {
+        if let Ok(entry) = read_gpt_entry(device.clone(), &gpt_header, i) {
+            if !is_zero_guid(&entry.partition_type_guid) {
+                // Valid partition found
+                partitions.push(Partition {
+                    start_lba: entry.first_lba,
+                    end_lba: entry.last_lba,
+                    name: String::from("partition"),
+                    device: Arc::clone(&device),
+                });
+            }
+        }
+    }
+    
+    Ok(partitions)
+}
+
+/// Parse MBR partitions from a device  
+fn parse_mbr_partitions(device: Arc<dyn BlockDevice>) -> Result<Vec<Partition>, &'static str> {
+    let mut buffer = vec![0u8; 512];
+    device.read(0, &mut buffer)?;
+    
+    let mut partitions = Vec::new();
+    
+    // Parse primary partitions
+    for i in 0..4 {
+        let offset = 446 + (i * 16);
+        if offset + 16 > buffer.len() {
+            break;
+        }
+        
+        let partition_type = buffer[offset + 4];
+        if partition_type == 0 {
+            continue; // Empty partition entry
+        }
+        
+        let lba_start = u32::from_le_bytes([
+            buffer[offset + 8],
+            buffer[offset + 9],
+            buffer[offset + 10],
+            buffer[offset + 11],
+        ]) as u64;
+        
+        let num_sectors = u32::from_le_bytes([
+            buffer[offset + 12],
+            buffer[offset + 13],
+            buffer[offset + 14],
+            buffer[offset + 15],
+        ]) as u64;
+        
+        if num_sectors > 0 {
+            // Valid partition found
+            partitions.push(Partition {
+                start_lba: lba_start,
+                end_lba: lba_start + num_sectors - 1,
+                name: String::from("partition"),
+                device: Arc::clone(&device),
+            });
+        }
+    }
+    
+    Ok(partitions)
+}
+
+/// Check if a GUID is all zeros
+fn is_zero_guid(guid: &[u8; 16]) -> bool {
+    guid.iter().all(|&b| b == 0)
 }
 
 #[cfg(test)]
