@@ -66,6 +66,9 @@ static NEXT_TIMER_ID: Mutex<TimerId> = Mutex::new(1);
 pub fn init() {
     let mut timers = TIMERS.lock();
     *timers = BTreeMap::new();
+
+    let mut next_id = NEXT_TIMER_ID.lock();
+    *next_id = 1;
 }
 
 /// Create a new one-shot timer
