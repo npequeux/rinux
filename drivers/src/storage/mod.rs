@@ -1,0 +1,14 @@
+//! Storage Subsystem
+//!
+//! Block devices, disk controllers, and partition support
+
+pub mod block;
+pub mod ahci;
+pub mod nvme;
+pub mod partition;
+
+/// Initialize storage subsystem
+pub fn init() {
+    block::init();
+    partition::init();
+}
