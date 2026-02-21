@@ -167,7 +167,10 @@ impl MemoryMapper {
             let virt = VirtAddr::new(virt_addr as u64);
             let phys = PhysAddr::new(frame.start_address());
 
-            if mapper.map_page(virt, phys, writable, user_accessible).is_err() {
+            if mapper
+                .map_page(virt, phys, writable, user_accessible)
+                .is_err()
+            {
                 // Failed to map, clean up already mapped pages
                 for j in 0..i {
                     let cleanup_virt = VirtAddr::new((map_addr + j * PAGE_SIZE) as u64);
