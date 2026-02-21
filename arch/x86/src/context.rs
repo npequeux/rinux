@@ -58,7 +58,6 @@ pub unsafe extern "C" fn switch_context(old: *mut Context, new: *const Context) 
         // Save return address
         "mov rax, [rsp]",
         "mov [rdi + 0x30], rax",
-        
         // Load new context
         "mov r15, [rsi + 0x00]",
         "mov r14, [rsi + 0x08]",
@@ -68,7 +67,6 @@ pub unsafe extern "C" fn switch_context(old: *mut Context, new: *const Context) 
         "mov rbp, [rsi + 0x28]",
         "mov rax, [rsi + 0x30]",
         "mov [rsp], rax",
-        
         "ret",
     )
 }
@@ -135,12 +133,30 @@ impl FullContext {
     /// Create a new full context
     pub const fn new() -> Self {
         Self {
-            rax: 0, rbx: 0, rcx: 0, rdx: 0,
-            rsi: 0, rdi: 0, rbp: 0, rsp: 0,
-            r8: 0, r9: 0, r10: 0, r11: 0,
-            r12: 0, r13: 0, r14: 0, r15: 0,
-            rip: 0, rflags: 0,
-            cs: 0, ss: 0, ds: 0, es: 0, fs: 0, gs: 0,
+            rax: 0,
+            rbx: 0,
+            rcx: 0,
+            rdx: 0,
+            rsi: 0,
+            rdi: 0,
+            rbp: 0,
+            rsp: 0,
+            r8: 0,
+            r9: 0,
+            r10: 0,
+            r11: 0,
+            r12: 0,
+            r13: 0,
+            r14: 0,
+            r15: 0,
+            rip: 0,
+            rflags: 0,
+            cs: 0,
+            ss: 0,
+            ds: 0,
+            es: 0,
+            fs: 0,
+            gs: 0,
         }
     }
 
@@ -149,8 +165,8 @@ impl FullContext {
         self.rip = entry;
         self.rsp = stack;
         self.rflags = 0x202; // IF (interrupt enable) flag
-        self.cs = 0x18 | 3;  // User code segment with RPL=3
-        self.ss = 0x20 | 3;  // User data segment with RPL=3
+        self.cs = 0x18 | 3; // User code segment with RPL=3
+        self.ss = 0x20 | 3; // User data segment with RPL=3
         self.ds = 0x20 | 3;
         self.es = 0x20 | 3;
     }
@@ -160,8 +176,8 @@ impl FullContext {
         self.rip = entry;
         self.rsp = stack;
         self.rflags = 0x202; // IF flag
-        self.cs = 0x08;      // Kernel code segment
-        self.ss = 0x10;      // Kernel data segment
+        self.cs = 0x08; // Kernel code segment
+        self.ss = 0x10; // Kernel data segment
         self.ds = 0x10;
         self.es = 0x10;
     }

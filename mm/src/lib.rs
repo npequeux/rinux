@@ -10,9 +10,9 @@ extern crate alloc;
 pub mod allocator;
 pub mod frame;
 pub mod heap;
-pub mod vmalloc;
-pub mod slab;
 pub mod page_fault;
+pub mod slab;
+pub mod vmalloc;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -29,6 +29,9 @@ pub fn init() {
 
     // Initialize heap allocator
     heap::init();
+
+    // Initialize vmalloc
+    vmalloc::init();
 
     MM_INITIALIZED.store(true, Ordering::Release);
 }

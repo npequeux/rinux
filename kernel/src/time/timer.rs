@@ -113,19 +113,19 @@ pub fn cancel_timer(timer_id: TimerId) -> Result<(), ()> {
 /// Process timer ticks
 pub fn tick() {
     let current_time = super::uptime_ms();
-    
+
     // Collect expired timer callbacks
     let mut callbacks_to_execute = Vec::new();
-    
+
     {
         let mut timers = TIMERS.lock();
         let mut to_remove = Vec::new();
-        
+
         // Find expired timers and collect their callbacks
         for (id, timer) in timers.iter_mut() {
             if timer.has_expired(current_time) {
                 callbacks_to_execute.push(timer.callback);
-                
+
                 // Reset or mark for removal
                 if timer.periodic {
                     timer.reset();
@@ -134,13 +134,13 @@ pub fn tick() {
                 }
             }
         }
-        
+
         // Remove one-shot timers
         for id in to_remove {
             timers.remove(&id);
         }
     } // Lock is dropped here
-    
+
     // Execute callbacks without holding the lock
     for callback in callbacks_to_execute {
         callback();
