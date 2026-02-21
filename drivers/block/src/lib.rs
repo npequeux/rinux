@@ -10,6 +10,7 @@ pub mod device;
 pub mod request;
 pub mod partition;
 pub mod ahci;
+pub mod ahci_irq;
 pub mod nvme;
 
 use alloc::vec::Vec;

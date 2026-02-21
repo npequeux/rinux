@@ -8,6 +8,7 @@ extern crate alloc;
 
 pub mod tmpfs;
 pub mod ext2;
+pub mod mount;
 pub mod vfs;
 
 /// Filesystem error

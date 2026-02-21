@@ -1,8 +1,9 @@
 //! AHCI (Advanced Host Controller Interface) Driver
 //!
-//! Driver for SATA devices using AHCI
+//! Driver for SATA devices using AHCI with interrupt support
 
 use crate::device::{BlockDevice, BlockDeviceError};
+use crate::ahci_irq::{add_pending_io, wait_for_completion, enable_port_interrupts};
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -260,18 +261,19 @@ impl AhciDevice {
         Ok(())
     }
     
-    /// Wait for command completion
+    /// Wait for command completion (interrupt-driven)
     fn wait_for_completion(&self, port: *mut PortRegisters) -> Result<(), ()> {
-        // Poll command issue register until command completes
-        for _ in 0..1000000 {
-            unsafe {
-                let ci = core::ptr::read_volatile(&(*port).command_issue as *const u32);
-                if ci == 0 {
-                    return Ok(());
-                }
-            }
+        // Create I/O completion tracker
+        let completion = add_pending_io(self.port, 0);
+        
+        // Enable port interrupts
+        enable_port_interrupts(self.hba as *mut u8, self.port);
+        
+        // Wait for completion with timeout (5 seconds = 5000ms)
+        match wait_for_completion(&completion, 5000) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(()),
         }
-        Err(())
     }
 }
 
@@ -378,6 +380,9 @@ static AHCI_CONTROLLERS: Mutex<Vec<AhciController>> = Mutex::new(Vec::new());
 
 /// Initialize AHCI driver
 pub fn init() {
+    // Initialize interrupt-driven I/O
+    crate::ahci_irq::init();
+    
     // Scan PCI for AHCI controllers
     // For each controller found:
     //   1. Map the HBA registers

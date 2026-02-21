@@ -14,6 +14,7 @@ pub mod printk;
 pub mod process;
 pub mod signal;
 pub mod syscall;
+pub mod tests;
 pub mod time;
 pub mod types;
 
