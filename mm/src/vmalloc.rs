@@ -87,7 +87,7 @@ impl VMAllocator {
                 self.regions[i].size = aligned_size;
 
                 // Allocate physical frames and map them
-                if let Err(_) = self.map_region(addr, aligned_size) {
+                if self.map_region(addr, aligned_size).is_err() {
                     // Failed to map, mark as free again
                     self.regions[i].used = false;
                     return None;
@@ -130,17 +130,15 @@ impl VMAllocator {
             // Allocate a physical frame
             let frame = frame::allocate_frame().ok_or(())?;
 
-            // Zero the frame
-            unsafe {
-                let ptr = frame.start_address() as *mut u8;
-                core::ptr::write_bytes(ptr, 0, PAGE_SIZE);
-            }
+            // Note: Cannot directly zero physical memory without mapping it first
+            // TODO: Integrate with page table mapping to zero frames
+            // For now, frames are allocated but not zeroed (security risk)
 
-            // Map the page
-            // TODO: Use proper page table mapping
-            // For now, this is a stub
+            // Map the page (stub - needs proper page table integration)
             let _phys_addr = frame.start_address();
             // map_page(virt_addr, phys_addr, true, false)?;
+            
+            let _ = virt_addr; // Suppress warning
         }
 
         Ok(())
