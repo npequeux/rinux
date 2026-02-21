@@ -131,18 +131,20 @@ pub fn handle_syscall(
     match syscall {
         SyscallNumber::Read => {
             // arg1: fd, arg2: buf ptr, arg3: count
-            let _fd = arg1 as i32;
-            let _buf = arg2 as *mut u8;
-            let _count = arg3;
+            let fd = arg1 as i32;
+            let buf = arg2 as *mut u8;
+            let count = arg3;
             // TODO: Implement proper read with buffer safety checks
+            let _ = (fd, buf, count);
             Err(errno::ENOSYS)
         }
         SyscallNumber::Write => {
             // arg1: fd, arg2: buf ptr, arg3: count
-            let _fd = arg1 as i32;
-            let _buf = arg2 as *const u8;
-            let _count = arg3;
+            let fd = arg1 as i32;
+            let buf = arg2 as *const u8;
+            let count = arg3;
             // TODO: Implement proper write with buffer safety checks
+            let _ = (fd, buf, count);
             Err(errno::ENOSYS)
         }
         SyscallNumber::Open => {
@@ -167,12 +169,15 @@ pub fn handle_syscall(
         }
         SyscallNumber::Exit => {
             // arg1: exit code
-            let exit_code = arg1 as i32;
-            // TODO: Mark current process as exited
+            let _exit_code = arg1 as i32;
+            // Mark current process as exited and remove from scheduler
             if let Some(pid) = crate::process::sched::current_pid() {
                 crate::process::sched::remove_task(pid);
             }
-            Ok(exit_code as usize)
+            // Trigger scheduler to switch to another task
+            crate::process::sched::schedule();
+            // Should never return here, but if we do, return error
+            Err(errno::ESRCH)
         }
         SyscallNumber::Wait4 => {
             // TODO: Implement wait4 - wait for process

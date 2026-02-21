@@ -4,6 +4,7 @@
 
 use alloc::collections::VecDeque;
 use alloc::vec::Vec;
+use core::sync::atomic::{AtomicBool, Ordering};
 use spin::Mutex;
 
 /// Pipe buffer size
@@ -22,8 +23,8 @@ pub enum PipeEnd {
 pub struct Pipe {
     buffer: Mutex<VecDeque<u8>>,
     capacity: usize,
-    read_closed: bool,
-    write_closed: bool,
+    read_closed: AtomicBool,
+    write_closed: AtomicBool,
 }
 
 impl Pipe {
@@ -32,14 +33,14 @@ impl Pipe {
         Pipe {
             buffer: Mutex::new(VecDeque::with_capacity(PIPE_BUF_SIZE)),
             capacity: PIPE_BUF_SIZE,
-            read_closed: false,
-            write_closed: false,
+            read_closed: AtomicBool::new(false),
+            write_closed: AtomicBool::new(false),
         }
     }
 
     /// Write data to pipe
     pub fn write(&self, data: &[u8]) -> Result<usize, ()> {
-        if self.write_closed {
+        if self.write_closed.load(Ordering::Acquire) {
             return Err(());
         }
 
@@ -59,7 +60,7 @@ impl Pipe {
 
     /// Read data from pipe
     pub fn read(&self, buf: &mut [u8]) -> Result<usize, ()> {
-        if self.read_closed {
+        if self.read_closed.load(Ordering::Acquire) {
             return Err(());
         }
 
@@ -79,10 +80,10 @@ impl Pipe {
     }
 
     /// Close pipe end
-    pub fn close(&mut self, end: PipeEnd) {
+    pub fn close(&self, end: PipeEnd) {
         match end {
-            PipeEnd::Read => self.read_closed = true,
-            PipeEnd::Write => self.write_closed = true,
+            PipeEnd::Read => self.read_closed.store(true, Ordering::Release),
+            PipeEnd::Write => self.write_closed.store(true, Ordering::Release),
         }
     }
 

@@ -48,6 +48,15 @@ pub fn uptime_sec() -> u64 {
 }
 
 /// Sleep for specified milliseconds
+///
+/// # Warning
+///
+/// This function uses a busy-wait implementation that wastes CPU cycles
+/// and prevents other tasks from running. **Do not use for production code
+/// or long sleep durations** as it will severely impact system performance.
+///
+/// This is a temporary implementation until proper scheduler-integrated
+/// sleep/wake mechanisms are added.
 pub fn sleep_ms(ms: u64) {
     let target = uptime_ms() + ms;
     while uptime_ms() < target {
