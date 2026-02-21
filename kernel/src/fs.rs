@@ -34,7 +34,7 @@ pub mod flags {
 }
 
 /// Open a file
-pub fn open_file(pathname: &str, flags: i32, _mode: u32) -> Result<FileDescriptor, isize> {
+pub fn open_file(_pathname: &str, flags: i32, _mode: u32) -> Result<FileDescriptor, isize> {
     use crate::syscall::errno;
     
     if !is_initialized() {

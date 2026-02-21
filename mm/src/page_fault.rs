@@ -13,7 +13,7 @@ const PAGE_SIZE: u64 = 4096;
 const PAGE_MASK: u64 = !(PAGE_SIZE - 1);
 
 /// Page offset mask
-const PAGE_OFFSET_MASK: u64 = PAGE_SIZE - 1;
+const _PAGE_OFFSET_MASK: u64 = PAGE_SIZE - 1;
 
 /// Tracks which pages are marked as copy-on-write
 static COW_PAGES: Mutex<Option<BTreeSet<u64>>> = Mutex::new(None);
@@ -218,6 +218,7 @@ fn find_vma(addr: u64) -> Result<VMA, PageFaultError> {
 }
 
 /// Check if a page is marked copy-on-write
+#[allow(dead_code)]
 fn is_copy_on_write(page_addr: u64) -> bool {
     is_cow(page_addr)
 }

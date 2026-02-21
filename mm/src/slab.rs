@@ -16,7 +16,7 @@ const SIZE_CLASSES: &[usize] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 const NUM_SIZE_CLASSES: usize = SIZE_CLASSES.len();
 
 /// Maximum size for slab allocation (larger allocations use buddy allocator)
-const MAX_SLAB_SIZE: usize = 4096;
+const _MAX_SLAB_SIZE: usize = 4096;
 
 /// Pages per slab
 const PAGES_PER_SLAB: usize = 1;
@@ -96,11 +96,13 @@ impl Slab {
     }
 
     /// Check if slab is full
+    #[allow(dead_code)]
     fn is_full(&self) -> bool {
         self.num_free == 0
     }
 
     /// Check if slab is empty
+    #[allow(dead_code)]
     fn is_empty(&self) -> bool {
         self.num_free == self.num_objects
     }
@@ -259,6 +261,7 @@ impl BumpAllocator {
 }
 
 /// Global allocator wrapper
+#[allow(dead_code)]
 struct LockedSlabAllocator(Mutex<SlabAllocator>);
 
 unsafe impl GlobalAlloc for LockedSlabAllocator {

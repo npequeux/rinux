@@ -2,10 +2,9 @@
 //!
 //! Linux CFS-inspired scheduler with virtual runtime tracking.
 
-use super::task::{Task, TaskState, Priority};
+use super::task::{Task, Priority};
 use crate::types::Pid;
 use alloc::collections::BTreeMap;
-use alloc::vec::Vec;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use spin::Mutex;
 
@@ -326,7 +325,7 @@ pub fn set_cpu_affinity(pid: Pid, cpu_mask: u64) -> Result<(), &'static str> {
 pub fn should_preempt() -> bool {
     let queue = CFS_SCHEDULER.lock();
     
-    if let Some((current_pid, current_vruntime)) = queue.current {
+    if let Some((_current_pid, current_vruntime)) = queue.current {
         // Check if current task has exceeded its time slice
         let runtime_ns = CURRENT_RUNTIME_NS.load(Ordering::Relaxed);
         

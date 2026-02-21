@@ -4,10 +4,8 @@
 
 use crate::process::exec::{parse_elf_header, ExecContext};
 use crate::process::fork::{MemoryContext, RegisterState};
-use crate::process::sched;
 use crate::{printk, printkln};
 use alloc::vec;
-use alloc::vec::Vec;
 
 /// Test result
 enum TestResult {

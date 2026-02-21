@@ -45,7 +45,6 @@ impl MemoryContext {
 
     /// Clone the memory context (copy-on-write implementation)
     pub fn clone_for_fork(&self) -> Result<Self, &'static str> {
-        use rinux_mm::paging::{PageMapper, VirtAddr, PhysAddr};
         use rinux_mm::frame;
         
         // Create a new page table for the child

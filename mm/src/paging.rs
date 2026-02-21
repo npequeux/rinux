@@ -200,13 +200,13 @@ impl PageTableEntry {
     const PRESENT: u64 = 1 << 0;
     const WRITABLE: u64 = 1 << 1;
     const USER: u64 = 1 << 2;
-    const WRITE_THROUGH: u64 = 1 << 3;
-    const NO_CACHE: u64 = 1 << 4;
-    const ACCESSED: u64 = 1 << 5;
-    const DIRTY: u64 = 1 << 6;
+    const _WRITE_THROUGH: u64 = 1 << 3;
+    const _NO_CACHE: u64 = 1 << 4;
+    const _ACCESSED: u64 = 1 << 5;
+    const _DIRTY: u64 = 1 << 6;
     const HUGE: u64 = 1 << 7;
-    const GLOBAL: u64 = 1 << 8;
-    const NO_EXECUTE: u64 = 1 << 63;
+    const _GLOBAL: u64 = 1 << 8;
+    const _NO_EXECUTE: u64 = 1 << 63;
     const ADDR_MASK: u64 = 0x000F_FFFF_FFFF_F000;
 
     pub const fn new() -> Self {

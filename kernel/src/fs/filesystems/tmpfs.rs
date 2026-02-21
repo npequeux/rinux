@@ -250,7 +250,7 @@ impl Tmpfs {
 
     /// Create a new tmpfs instance
     pub fn new() -> Self {
-        let mut tmpfs = Tmpfs {
+        let tmpfs = Tmpfs {
             inodes: Mutex::new(BTreeMap::new()),
             next_inode: AtomicU64::new(Self::ROOT_INODE + 1),
             root_inode: Self::ROOT_INODE,

@@ -3,7 +3,6 @@
 //! Implementation of execve system call.
 
 use super::task::Task;
-use crate::types::Pid;
 use alloc::string::String;
 use alloc::vec::Vec;
 

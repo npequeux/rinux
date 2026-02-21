@@ -2,7 +2,7 @@
 //!
 //! Implementation of wait, waitpid, wait4 system calls.
 
-use super::task::{Task, TaskState};
+use super::task::Task;
 use crate::types::Pid;
 use alloc::vec::Vec;
 use spin::Mutex;

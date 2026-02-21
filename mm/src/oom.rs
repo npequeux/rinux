@@ -45,7 +45,7 @@ impl ProcessOomInfo {
 struct OomKiller {
     enabled: bool,
     min_free_memory: u64, // Minimum free memory before OOM kicks in
-    last_kill_time: u64,  // Timestamp of last kill
+    _last_kill_time: u64,  // Timestamp of last kill
 }
 
 impl Default for OomKiller {
@@ -59,7 +59,7 @@ impl OomKiller {
         OomKiller {
             enabled: true,
             min_free_memory: 16 * 1024 * 1024, // 16 MB
-            last_kill_time: 0,
+            _last_kill_time: 0,
         }
     }
 
