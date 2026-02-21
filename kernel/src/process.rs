@@ -2,6 +2,7 @@
 //!
 //! Process scheduling and management.
 
+pub mod cfs;
 pub mod exec;
 pub mod fork;
 pub mod pid;

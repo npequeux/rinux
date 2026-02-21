@@ -24,6 +24,7 @@ pub type Priority = u8;
 pub const DEFAULT_PRIORITY: Priority = 120;
 
 /// Task structure
+#[derive(Clone)]
 pub struct Task {
     /// Process ID
     pub pid: Pid,
