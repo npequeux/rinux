@@ -11,6 +11,8 @@ pub mod allocator;
 pub mod frame;
 pub mod heap;
 pub mod vmalloc;
+pub mod slab;
+pub mod page_fault;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
