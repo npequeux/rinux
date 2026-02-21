@@ -1,0 +1,16 @@
+[package]
+name = "rinux-fs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Rinux Contributors"]
+license = "MIT"
+description = "Rinux filesystem support"
+
+[dependencies]
+spin = "0.9"
+bitflags = "2.4"
+rinux-kernel = { path = "../../kernel" }
+
+[lib]
+name = "rinux_fs"
+path = "src/lib.rs"
