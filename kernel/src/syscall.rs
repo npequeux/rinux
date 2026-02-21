@@ -229,9 +229,9 @@ pub fn handle_syscall(
             Ok(0)
         }
         SyscallNumber::Time => {
-            // Return system time in seconds
-            let time = crate::time::uptime_sec();
-            Ok(time as usize)
+            // POSIX time(2): should return seconds since Unix epoch.
+            // We currently only have uptime, not a real wall-clock, so this is unimplemented.
+            Err(errno::ENOSYS)
         }
         SyscallNumber::Stat => {
             // TODO: Implement stat
