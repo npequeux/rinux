@@ -39,7 +39,11 @@ pub fn uptime_ms() -> u64 {
 /// Increment uptime (called by timer interrupt)
 pub fn tick(ms: u64) {
     UPTIME_MS.fetch_add(ms, Ordering::Relaxed);
-    timer::tick();
+    // Run timer processing with interrupts disabled to avoid deadlocks when
+    // `timer::tick()` acquires locks such as `spin::Mutex` from interrupt context.
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        timer::tick();
+    });
 }
 
 /// Get system uptime in seconds
