@@ -7,6 +7,9 @@ use alloc::vec::Vec;
 use alloc::sync::Arc;
 use alloc::string::String;
 
+/// Maximum number of GPT partition entries to read (safety limit to prevent excessive memory usage)
+const MAX_GPT_PARTITIONS: u32 = 128;
+
 /// Partition table type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PartitionTableType {
@@ -277,8 +280,8 @@ fn parse_gpt_partitions(device: Arc<dyn BlockDevice>) -> Result<Vec<Partition>, 
     let gpt_header = read_gpt_header(device.clone())?;
     let mut partitions = Vec::new();
     
-    // Calculate number of partition entries
-    let entry_count = gpt_header.num_partition_entries.min(128); // Safety limit
+    // Calculate number of partition entries (apply safety limit)
+    let entry_count = gpt_header.num_partition_entries.min(MAX_GPT_PARTITIONS);
     
     // Read partition entries
     for i in 0..entry_count {

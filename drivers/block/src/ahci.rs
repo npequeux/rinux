@@ -13,6 +13,12 @@ use spin::Mutex;
 pub const AHCI_PCI_CLASS: u8 = 0x01;  // Mass Storage Controller
 pub const AHCI_PCI_SUBCLASS: u8 = 0x06;  // SATA Controller
 
+/// PCI BAR memory/IO space indicator
+const PCI_BAR_MEMORY_SPACE: u32 = 0x1;
+
+/// Maximum PCI bus number to scan (avoid excessive boot delay)
+const MAX_PCI_BUS: u16 = 256;
+
 /// AHCI HBA (Host Bus Adapter) Registers
 #[repr(C)]
 struct HbaRegisters {
@@ -407,9 +413,13 @@ pub fn init() {
 /// Scan PCI bus for AHCI controllers
 fn scan_pci_for_ahci() -> Vec<usize> {
     let mut controllers = Vec::new();
+    let mut empty_buses = 0;
+    const MAX_EMPTY_BUSES: u16 = 8; // Stop after 8 consecutive empty buses
     
     // Scan all PCI buses, devices, and functions
-    for bus in 0..256u16 {
+    for bus in 0..MAX_PCI_BUS {
+        let mut bus_has_devices = false;
+        
         for device in 0..32u8 {
             for function in 0..8u8 {
                 // Read vendor ID
@@ -420,6 +430,8 @@ fn scan_pci_for_ahci() -> Vec<usize> {
                 if vendor_id == 0xFFFF {
                     continue;
                 }
+                
+                bus_has_devices = true;
                 
                 // Read class/subclass
                 let class_reg = read_pci_config_u16(bus as u8, device, function, 0x0A);
@@ -435,7 +447,7 @@ fn scan_pci_for_ahci() -> Vec<usize> {
                     if prog_if == 0x01 {
                         // Read BAR5 (AHCI Base Address Register)
                         let bar5 = read_pci_config_u32(bus as u8, device, function, 0x24);
-                        if bar5 != 0 && (bar5 & 0x1) == 0 {
+                        if bar5 != 0 && (bar5 & PCI_BAR_MEMORY_SPACE) == 0 {
                             // Valid memory BAR
                             let hba_base = (bar5 & !0xFFF) as usize;
                             controllers.push(hba_base);
@@ -443,6 +455,16 @@ fn scan_pci_for_ahci() -> Vec<usize> {
                     }
                 }
             }
+        }
+        
+        // Early termination: stop if we've seen many consecutive empty buses
+        if !bus_has_devices {
+            empty_buses += 1;
+            if empty_buses >= MAX_EMPTY_BUSES {
+                break;
+            }
+        } else {
+            empty_buses = 0;
         }
     }
     

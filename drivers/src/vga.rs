@@ -12,6 +12,9 @@ const VGA_HEIGHT: usize = 25;
 /// VGA buffer address
 const VGA_BUFFER_ADDR: usize = 0xB8000;
 
+/// Tab width in characters
+const TAB_WIDTH: usize = 4;
+
 /// VGA color codes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -85,8 +88,8 @@ impl Writer {
             b'\n' => self.new_line(),
             b'\r' => self.column_position = 0,
             b'\t' => {
-                // Tab: align to next multiple of 4
-                let spaces = 4 - (self.column_position % 4);
+                // Tab: align to next multiple of TAB_WIDTH
+                let spaces = TAB_WIDTH - (self.column_position % TAB_WIDTH);
                 for _ in 0..spaces {
                     self.write_byte(b' ');
                 }
