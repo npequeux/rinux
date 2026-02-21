@@ -81,6 +81,11 @@ Rinux is licensed under the MIT License.
 
 ## Documentation
 
+### Getting Started
+- **[Features](FEATURES.md)** - Comprehensive feature overview and implementation status
+- **[Release Process](RELEASE_PROCESS.md)** - How to create and publish releases
+- [CHANGELOG](CHANGELOG.md) - Complete version history and changes
+
 ### Overview & Testing
 - [Test Coverage](docs/TEST_COVERAGE.md) - Unit test coverage report (61 tests, 100% pass rate)
 - [Linux Kernel Coverage Comparison](docs/LINUX_COVERAGE.md) - Detailed comparison with Linux kernel
