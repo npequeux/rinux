@@ -10,8 +10,12 @@ extern crate alloc;
 pub mod allocator;
 pub mod frame;
 pub mod heap;
+pub mod oom;
 pub mod page_fault;
+pub mod page_handler;
+pub mod paging;
 pub mod slab;
+pub mod swap;
 pub mod vmalloc;
 
 use core::sync::atomic::{AtomicBool, Ordering};
@@ -32,6 +36,15 @@ pub fn init() {
 
     // Initialize vmalloc
     vmalloc::init();
+
+    // Initialize paging support
+    paging::init();
+
+    // Initialize OOM killer
+    oom::init();
+
+    // Initialize swap support
+    swap::init();
 
     MM_INITIALIZED.store(true, Ordering::Release);
 }

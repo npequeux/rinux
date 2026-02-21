@@ -4,6 +4,7 @@
 
 pub mod fd;
 pub mod file;
+pub mod filesystems;
 pub mod vfs;
 
 pub use fd::{FileDescriptor, FileDescriptorTable};
@@ -22,6 +23,7 @@ pub fn init() {
 
     fd::init();
     vfs::init();
+    filesystems::init();
 
     FS_INITIALIZED.store(true, Ordering::Release);
     crate::printk::printk("  File system subsystem initialized\n");

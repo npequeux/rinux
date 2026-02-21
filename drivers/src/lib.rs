@@ -4,6 +4,8 @@
 
 #![no_std]
 
+extern crate alloc;
+
 pub mod acpi;
 pub mod audio;
 pub mod graphics;
@@ -12,6 +14,7 @@ pub mod pci;
 pub mod power;
 pub mod rtc;
 pub mod serial;
+pub mod storage;
 pub mod timer;
 pub mod touchpad;
 pub mod usb;
@@ -34,6 +37,9 @@ pub fn init() {
 
     // Initialize PCI bus
     pci::init();
+
+    // Initialize storage subsystem (depends on PCI)
+    storage::init();
 
     // Initialize graphics subsystem
     graphics::init();
