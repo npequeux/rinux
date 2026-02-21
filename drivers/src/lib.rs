@@ -8,6 +8,7 @@ extern crate alloc;
 
 pub mod acpi;
 pub mod audio;
+pub mod early_printk;
 pub mod graphics;
 pub mod keyboard;
 pub mod pci;

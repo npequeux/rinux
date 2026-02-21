@@ -113,7 +113,56 @@ pub fn flush_tlb_all() {
 }
 
 /// Initialize paging
+///
+/// Verifies paging is enabled and checks CPU features.
+/// The bootloader should have already set up initial page tables.
 pub fn init() {
-    // Page tables should already be set up by bootloader
-    // Here we can verify and enhance them if needed
+    // Verify paging is enabled (CR0.PG bit)
+    let cr0 = read_cr0();
+    if (cr0 & (1 << 31)) == 0 {
+        panic!("Paging is not enabled!");
+    }
+    
+    // Verify we're in 64-bit long mode (EFER.LMA bit)
+    let efer = read_efer();
+    if (efer & (1 << 10)) == 0 {
+        panic!("Not in 64-bit long mode!");
+    }
+    
+    // Check for NX bit support (EFER.NXE bit)
+    let nx_enabled = (efer & (1 << 11)) != 0;
+    
+    // Get current page table
+    let cr3 = read_cr3();
+    
+    // In early boot logging would use early_printk:
+    // early_printk!("Paging initialized: CR3={:#x}, NX={}\n", cr3, nx_enabled);
+    let _ = (cr3, nx_enabled); // Suppress unused warnings
+}
+
+/// Read CR0 register
+fn read_cr0() -> u64 {
+    let value: u64;
+    unsafe {
+        asm!("mov {}, cr0", out(reg) value, options(nomem, nostack));
+    }
+    value
+}
+
+/// Read EFER (Extended Feature Enable Register)
+fn read_efer() -> u64 {
+    let value: u64;
+    unsafe {
+        asm!(
+            "mov ecx, 0xC0000080", // EFER MSR
+            "rdmsr",
+            "shl rdx, 32",
+            "or rax, rdx",
+            out("rax") value,
+            out("rdx") _,
+            out("ecx") _,
+            options(nomem, nostack)
+        );
+    }
+    value
 }

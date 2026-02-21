@@ -13,6 +13,12 @@ use spin::Mutex;
 pub const AHCI_PCI_CLASS: u8 = 0x01;  // Mass Storage Controller
 pub const AHCI_PCI_SUBCLASS: u8 = 0x06;  // SATA Controller
 
+/// PCI BAR memory/IO space indicator
+const PCI_BAR_MEMORY_SPACE: u32 = 0x1;
+
+/// Maximum PCI bus number to scan (avoid excessive boot delay)
+const MAX_PCI_BUS: u16 = 256;
+
 /// AHCI HBA (Host Bus Adapter) Registers
 #[repr(C)]
 struct HbaRegisters {
@@ -384,25 +390,151 @@ pub fn init() {
     crate::ahci_irq::init();
     
     // Scan PCI for AHCI controllers
-    // For each controller found:
-    //   1. Map the HBA registers
-    //   2. Create an AhciController
-    //   3. Initialize it
-    //   4. Probe for devices
-    //   5. Register devices with block layer
+    let controllers = scan_pci_for_ahci();
     
-    // This is a stub - full implementation would scan PCI bus
+    if controllers.is_empty() {
+        // No AHCI controllers found
+        return;
+    }
+    
+    // Initialize each controller
+    let mut ctrl_list = AHCI_CONTROLLERS.lock();
+    for hba_base in controllers {
+        unsafe {
+            let mut controller = AhciController::new(hba_base);
+            if controller.init().is_ok() {
+                controller.probe_devices();
+                ctrl_list.push(controller);
+            }
+        }
+    }
 }
 
 /// Scan PCI bus for AHCI controllers
 fn scan_pci_for_ahci() -> Vec<usize> {
-    // Scan PCI configuration space for devices with:
-    // - Class = 0x01 (Mass Storage)
-    // - Subclass = 0x06 (SATA)
-    // - Programming Interface = 0x01 (AHCI)
+    let mut controllers = Vec::new();
+    let mut empty_buses = 0;
+    const MAX_EMPTY_BUSES: u16 = 8; // Stop after 8 consecutive empty buses
     
-    // Return list of MMIO base addresses
-    Vec::new()
+    // Scan all PCI buses, devices, and functions
+    for bus in 0..MAX_PCI_BUS {
+        let mut bus_has_devices = false;
+        
+        for device in 0..32u8 {
+            for function in 0..8u8 {
+                // Read vendor ID
+                let vendor_device = read_pci_config_u16(bus as u8, device, function, 0);
+                let vendor_id = vendor_device & 0xFFFF;
+                
+                // Skip if no device present (vendor ID 0xFFFF)
+                if vendor_id == 0xFFFF {
+                    continue;
+                }
+                
+                bus_has_devices = true;
+                
+                // Read class/subclass
+                let class_reg = read_pci_config_u16(bus as u8, device, function, 0x0A);
+                let subclass = (class_reg >> 8) as u8;
+                let class = (class_reg & 0xFF) as u8;
+                
+                // Check for SATA controller (class 0x01, subclass 0x06)
+                if class == AHCI_PCI_CLASS && subclass == AHCI_PCI_SUBCLASS {
+                    // Read programming interface
+                    let prog_if = read_pci_config_u8(bus as u8, device, function, 0x09);
+                    
+                    // Check for AHCI (programming interface 0x01)
+                    if prog_if == 0x01 {
+                        // Read BAR5 (AHCI Base Address Register)
+                        let bar5 = read_pci_config_u32(bus as u8, device, function, 0x24);
+                        if bar5 != 0 && (bar5 & PCI_BAR_MEMORY_SPACE) == 0 {
+                            // Valid memory BAR
+                            let hba_base = (bar5 & !0xFFF) as usize;
+                            controllers.push(hba_base);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Early termination: stop if we've seen many consecutive empty buses
+        if !bus_has_devices {
+            empty_buses += 1;
+            if empty_buses >= MAX_EMPTY_BUSES {
+                break;
+            }
+        } else {
+            empty_buses = 0;
+        }
+    }
+    
+    controllers
+}
+
+/// Read PCI configuration word (16-bit)
+fn read_pci_config_u16(bus: u8, device: u8, function: u8, offset: u8) -> u16 {
+    let value = read_pci_config_u32(bus, device, function, offset & 0xFC);
+    let shift = ((offset & 0x2) * 8) as u32;
+    ((value >> shift) & 0xFFFF) as u16
+}
+
+/// Read PCI configuration byte (8-bit)
+fn read_pci_config_u8(bus: u8, device: u8, function: u8, offset: u8) -> u8 {
+    let value = read_pci_config_u32(bus, device, function, offset & 0xFC);
+    let shift = ((offset & 0x3) * 8) as u32;
+    ((value >> shift) & 0xFF) as u8
+}
+
+/// Read PCI configuration dword (32-bit)
+fn read_pci_config_u32(bus: u8, device: u8, function: u8, offset: u8) -> u32 {
+    let address = 0x80000000u32
+        | ((bus as u32) << 16)
+        | ((device as u32) << 11)
+        | ((function as u32) << 8)
+        | ((offset as u32) & 0xFC);
+    
+    unsafe {
+        // Write address to CONFIG_ADDRESS port
+        core::arch::asm!(
+            "out 0xCF8, eax",
+            in("eax") address,
+            options(nomem, nostack)
+        );
+        
+        // Read data from CONFIG_DATA port
+        let mut data: u32;
+        core::arch::asm!(
+            "in eax, 0xCFC",
+            out("eax") data,
+            options(nomem, nostack)
+        );
+        data
+    }
+}
+
+/// Write PCI configuration dword (32-bit)
+fn write_pci_config_u32(bus: u8, device: u8, function: u8, offset: u8, value: u32) {
+    let address = 0x80000000u32
+        | ((bus as u32) << 16)
+        | ((device as u32) << 11)
+        | ((function as u32) << 8)
+        | ((offset as u32) & 0xFC);
+    
+    unsafe {
+        // Write address
+        core::arch::asm!(
+            "out 0xCF8, eax",
+            in("eax") address,
+            options(nomem, nostack)
+        );
+        
+        // Write data
+        core::arch::asm!(
+            "out 0xCFC, eax",
+            in("eax") value,
+            options(nomem, nostack)
+        );
+    }
 }
 
 #[cfg(test)]
