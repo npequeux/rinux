@@ -133,16 +133,19 @@ impl VMAllocator {
             // Allocate a physical frame
             let frame = frame::allocate_frame().ok_or(())?;
 
+            // Zero the physical frame BEFORE mapping to avoid race conditions
+            // TODO: This assumes identity mapping for physical frames
+            // In production, should use a temporary mapping or DMA region
+            unsafe {
+                let phys_ptr = frame.start_address() as *mut u8;
+                core::ptr::write_bytes(phys_ptr, 0, PAGE_SIZE);
+            }
+
             // Map the page with kernel-only permissions (writable, not user)
             let virt = VirtAddr::new(virt_addr as u64);
             let phys = PhysAddr::new(frame.start_address());
             mapper.map_page(virt, phys, true, false)
                 .map_err(|_| ())?;
-            
-            // Zero the page content
-            unsafe {
-                core::ptr::write_bytes(virt_addr as *mut u8, 0, PAGE_SIZE);
-            }
         }
 
         Ok(())

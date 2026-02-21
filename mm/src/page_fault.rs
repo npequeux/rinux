@@ -6,6 +6,15 @@ use crate::frame;
 use spin::Mutex;
 use alloc::collections::BTreeSet;
 
+/// Page size in bytes
+const PAGE_SIZE: u64 = 4096;
+
+/// Page mask for alignment
+const PAGE_MASK: u64 = !(PAGE_SIZE - 1);
+
+/// Page offset mask
+const PAGE_OFFSET_MASK: u64 = PAGE_SIZE - 1;
+
 /// Tracks which pages are marked as copy-on-write
 static COW_PAGES: Mutex<Option<BTreeSet<u64>>> = Mutex::new(None);
 
@@ -18,14 +27,14 @@ pub fn init_cow() {
 /// Mark a page as copy-on-write
 pub fn mark_cow(page_addr: u64) {
     if let Some(ref mut pages) = *COW_PAGES.lock() {
-        pages.insert(page_addr & !0xFFF);
+        pages.insert(page_addr & PAGE_MASK);
     }
 }
 
 /// Unmark a page as copy-on-write
 pub fn unmark_cow(page_addr: u64) {
     if let Some(ref mut pages) = *COW_PAGES.lock() {
-        pages.remove(&(page_addr & !0xFFF));
+        pages.remove(&(page_addr & PAGE_MASK));
     }
 }
 
@@ -33,7 +42,7 @@ pub fn unmark_cow(page_addr: u64) {
 pub fn is_cow(page_addr: u64) -> bool {
     COW_PAGES.lock()
         .as_ref()
-        .map(|pages| pages.contains(&(page_addr & !0xFFF)))
+        .map(|pages| pages.contains(&(page_addr & PAGE_MASK)))
         .unwrap_or(false)
 }
 
@@ -126,7 +135,7 @@ fn handle_demand_paging(
     is_instruction: bool,
 ) -> Result<(), PageFaultError> {
     // Align address to page boundary
-    let page_addr = fault_addr & !0xFFF;
+    let page_addr = fault_addr & PAGE_MASK;
 
     // Check if this is in a valid memory region
     let vma = find_vma(page_addr)?;
@@ -160,7 +169,7 @@ fn handle_demand_paging(
 
 /// Handle copy-on-write page fault
 fn handle_write_protection(fault_addr: u64, is_user: bool) -> Result<(), PageFaultError> {
-    let page_addr = fault_addr & !0xFFF;
+    let page_addr = fault_addr & PAGE_MASK;
 
     // Check if this is a copy-on-write page
     if is_cow(page_addr) {
@@ -218,12 +227,19 @@ fn copy_page_content(src_virt: u64, dst_phys: u64) -> Result<(), PageFaultError>
     use crate::paging::{PageMapper, VirtAddr, PhysAddr};
     
     // Map destination physical page to a temporary virtual address
-    // Use a high virtual address that's unlikely to conflict
+    // TODO: Use a proper temporary address allocator instead of hardcoded address
+    // to avoid conflicts with existing mappings
     const TEMP_MAP_ADDR: u64 = 0xFFFF_FFFF_FFFF_0000;
     
     let mut mapper = unsafe { PageMapper::new() };
     let temp_virt = VirtAddr::new(TEMP_MAP_ADDR);
     let dst_phys_addr = PhysAddr::new(dst_phys);
+    
+    // Check if temp address is already mapped (best effort)
+    if mapper.translate(temp_virt).is_some() {
+        // Try to unmap it first
+        let _ = mapper.unmap_page(temp_virt);
+    }
     
     // Map temporary address to destination physical frame
     mapper.map_page(temp_virt, dst_phys_addr, true, false)
@@ -233,14 +249,12 @@ fn copy_page_content(src_virt: u64, dst_phys: u64) -> Result<(), PageFaultError>
     unsafe {
         let src_ptr = src_virt as *const u8;
         let dst_ptr = TEMP_MAP_ADDR as *mut u8;
-        core::ptr::copy_nonoverlapping(src_ptr, dst_ptr, 4096);
+        core::ptr::copy_nonoverlapping(src_ptr, dst_ptr, PAGE_SIZE as usize);
     }
     
     // Unmap temporary address
-    mapper.unmap_page(temp_virt)
-        .map_err(|_| PageFaultError::PageTableError)?;
-    
-    // Note: We don't deallocate the frame from unmapping since it's our new frame
+    let _ = mapper.unmap_page(temp_virt);
+    // Note: We intentionally don't deallocate the frame since it's our new frame
     
     Ok(())
 }

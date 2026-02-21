@@ -59,7 +59,7 @@ impl CfsTask {
     }
 }
 
-/// Convert priority (0-255) to weight
+/// Convert priority (0-255) to weight using bit shifts for performance
 fn priority_to_weight(priority: Priority) -> u64 {
     // Map priority to nice value (-20 to +19)
     // Priority 0-39 => nice -20 to -1 (higher priority)
@@ -72,12 +72,16 @@ fn priority_to_weight(priority: Priority) -> u64 {
         (priority as i32 - 120) * 19 / 135
     };
 
-    // Weight calculation (simplified)
-    // Real CFS uses a more complex formula
+    // Weight calculation using bit shifts for performance
+    // This avoids expensive pow() calls in the scheduler hot path
     if nice <= 0 {
-        NICE_0_WEIGHT * 2u64.pow(nice.unsigned_abs())
+        // For negative nice (higher priority), weight = NICE_0_WEIGHT << abs(nice)
+        let shift = nice.unsigned_abs().min(10); // Cap at 10 to avoid overflow
+        NICE_0_WEIGHT << shift
     } else {
-        NICE_0_WEIGHT / 2u64.pow(nice as u32)
+        // For positive nice (lower priority), weight = NICE_0_WEIGHT >> nice
+        let shift = (nice as u32).min(10); // Cap at 10 to avoid underflow
+        NICE_0_WEIGHT >> shift
     }
 }
 

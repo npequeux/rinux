@@ -55,6 +55,9 @@ impl ExitStatus {
 
     /// Check if process was terminated by signal
     pub fn is_signaled(&self) -> bool {
+        // Signal detection using POSIX wait status encoding:
+        // If the low 7 bits are non-zero (and not 0x7F), the process was signaled
+        // The formula ((status & 0x7F) + 1) >> 1 > 0 detects this condition
         ((self.status & 0x7F) + 1) as i8 >> 1 > 0
     }
 

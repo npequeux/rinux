@@ -333,6 +333,19 @@ impl PageMapper {
             ((addr >> 12) & 0x1FF) as usize, // PT
         ]
     }
+    
+    /// Safely access a page table by physical address
+    ///
+    /// # Safety
+    ///
+    /// This assumes identity mapping for page tables. In a production kernel,
+    /// this should use a dedicated page table mapping region or recursive mapping.
+    /// The caller must ensure the physical address points to a valid page table.
+    unsafe fn access_page_table(phys: PhysAddr) -> &'static mut PageTable {
+        // TODO: In a complete implementation, map page tables to a known virtual
+        // address range instead of assuming identity mapping
+        &mut *(phys.as_u64() as *mut PageTable)
+    }
 
     /// Map a virtual page to a physical frame
     ///
@@ -353,11 +366,9 @@ impl PageMapper {
             
             // For each level (except the last), ensure the next level exists
             for level in 0..3 {
-                // Temporarily map the page table to access it
-                // In a full implementation, we'd have a recursive mapping or offset mapping
-                // For now, we assume identity mapping for page tables
-                let table_ptr = current_table_phys.as_u64() as *mut PageTable;
-                let table = unsafe { &mut *table_ptr };
+                // SAFETY: We assume identity mapping for page tables. This is a limitation
+                // of the current implementation and should be improved with proper mapping.
+                let table = unsafe { Self::access_page_table(current_table_phys) };
                 
                 let entry = table.get_entry_mut(indices[level])
                     .ok_or("Invalid page table index")?;
