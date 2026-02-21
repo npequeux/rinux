@@ -1,0 +1,17 @@
+[package]
+name = "rinux-block"
+version = "0.1.0"
+edition = "2021"
+authors = ["Rinux Contributors"]
+license = "MIT"
+description = "Rinux block device layer"
+
+[dependencies]
+spin = "0.9"
+bitflags = "2.4"
+rinux-kernel = { path = "../../kernel" }
+rinux-mm = { path = "../../mm" }
+
+[lib]
+name = "rinux_block"
+path = "src/lib.rs"
