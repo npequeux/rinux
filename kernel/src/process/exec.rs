@@ -154,123 +154,121 @@ pub fn do_exec(
     // 4. Set up the stack with arguments and environment
     // 5. Set up the initial register state
     // 6. Return the execution context
-    
+
     // For demonstration, we'll implement the core ELF loading logic
     // assuming we have the file data
-    
+
     // TODO: Read file from filesystem
     // For now, return error indicating file system not implemented
     let _ = (task, path);
-    
+
     // Stub: Create execution context
     let mut ctx = ExecContext::new(0x400000, 0x7FFFFFFFE000);
-    
+
     for arg in argv {
         ctx.add_arg(arg);
     }
-    
+
     for env in envp {
         ctx.add_env(env);
     }
-    
+
     Ok(ctx)
 }
 
 /// Load an ELF executable into memory
 pub fn load_elf(data: &[u8]) -> Result<ExecContext, &'static str> {
-    use rinux_mm::paging::{PageMapper, VirtAddr, PhysAddr};
     use rinux_mm::frame;
-    
+    use rinux_mm::paging::{PageMapper, PhysAddr, VirtAddr};
+
     // Parse ELF header
     let header = parse_elf_header(data)?;
-    
+
     // Load program segments
     let segments = load_elf_segments(data, &header)?;
-    
+
     let mut mapper = unsafe { PageMapper::new() };
-    
+
     // Load each PT_LOAD segment
     for segment in segments {
         // Calculate number of pages needed
         let start_page = segment.vaddr & !0xFFF;
         let end_page = (segment.vaddr + segment.memsz + 0xFFF) & !0xFFF;
         let num_pages = ((end_page - start_page) / 0x1000) as usize;
-        
+
         // Allocate and map pages for this segment
         for i in 0..num_pages {
             let virt_addr = start_page + (i as u64 * 0x1000);
-            
+
             // Allocate physical frame
-            let frame = frame::allocate_frame()
-                .ok_or("Out of memory while loading ELF")?;
-            
+            let frame = frame::allocate_frame().ok_or("Out of memory while loading ELF")?;
+
             // Determine permissions from segment flags
             // PF_X = 1, PF_W = 2, PF_R = 4
             let writable = (segment.flags & 2) != 0;
             let _executable = (segment.flags & 1) != 0;
-            
+
             // Map the page (user-accessible)
-            mapper.map_page(
-                VirtAddr::new(virt_addr),
-                PhysAddr::new(frame.start_address()),
-                writable,
-                true // user accessible
-            ).map_err(|_| "Failed to map ELF segment")?;
-            
+            mapper
+                .map_page(
+                    VirtAddr::new(virt_addr),
+                    PhysAddr::new(frame.start_address()),
+                    writable,
+                    true, // user accessible
+                )
+                .map_err(|_| "Failed to map ELF segment")?;
+
             // Zero the page initially
             unsafe {
                 core::ptr::write_bytes(virt_addr as *mut u8, 0, 0x1000);
             }
         }
-        
+
         // Copy segment data from file
         if segment.filesz > 0 {
             let file_offset = segment.offset as usize;
             let file_size = segment.filesz as usize;
-            
+
             if file_offset + file_size > data.len() {
                 return Err("Segment data out of bounds");
             }
-            
+
             let src = &data[file_offset..file_offset + file_size];
             let dst = segment.vaddr as *mut u8;
-            
+
             unsafe {
-                core::ptr::copy_nonoverlapping(
-                    src.as_ptr(),
-                    dst,
-                    file_size
-                );
+                core::ptr::copy_nonoverlapping(src.as_ptr(), dst, file_size);
             }
         }
     }
-    
+
     // Set up user stack (typical location)
     const USER_STACK_SIZE: u64 = 0x200000; // 2MB
-    const USER_STACK_TOP: u64 = 0x7FFFFFFF_F000;
+    const USER_STACK_TOP: u64 = 0x7FFF_FFFF_F000;
     let stack_bottom = USER_STACK_TOP - USER_STACK_SIZE;
-    
+
     // Allocate stack pages
     let num_stack_pages = (USER_STACK_SIZE / 0x1000) as usize;
     for i in 0..num_stack_pages {
         let virt_addr = stack_bottom + (i as u64 * 0x1000);
-        
-        let frame = frame::allocate_frame()
-            .ok_or("Out of memory allocating stack")?;
-        
-        mapper.map_page(
-            VirtAddr::new(virt_addr),
-            PhysAddr::new(frame.start_address()),
-            true,  // writable
-            true   // user accessible
-        ).map_err(|_| "Failed to map stack")?;
-        
+
+        let frame = frame::allocate_frame().ok_or("Out of memory allocating stack")?;
+
+        mapper
+            .map_page(
+                VirtAddr::new(virt_addr),
+                PhysAddr::new(frame.start_address()),
+                true, // writable
+                true, // user accessible
+            )
+            .map_err(|_| "Failed to map stack")?;
+
         // Zero stack pages
         unsafe {
             core::ptr::write_bytes(virt_addr as *mut u8, 0, 0x1000);
         }
     }
-    
+
     // Create execution context
     Ok(ExecContext::new(header.entry, USER_STACK_TOP))
 }

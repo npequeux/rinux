@@ -87,6 +87,12 @@ unsafe fn read_msr(msr: u32) -> u64 {
 }
 
 /// System call entry point (naked function)
+///
+/// # Safety
+///
+/// This is a naked assembly function that serves as the system call entry point.
+/// It must be called from the SYSCALL instruction with the proper register state.
+/// The caller must ensure that the kernel stack is properly set up.
 #[unsafe(naked)]
 pub unsafe extern "C" fn syscall_entry() -> ! {
     core::arch::naked_asm!(

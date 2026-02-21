@@ -146,7 +146,7 @@ pub fn handle_syscall(
             let fd = arg1 as i32;
             let buf = arg2 as *mut u8;
             let count = arg3;
-            
+
             // Validate buffer pointer
             if buf.is_null() || count == 0 {
                 return Err(errno::EINVAL);
@@ -163,7 +163,7 @@ pub fn handle_syscall(
             let fd = arg1 as i32;
             let buf = arg2 as *const u8;
             let count = arg3;
-            
+
             // Validate buffer pointer
             if buf.is_null() || count == 0 {
                 return Err(errno::EINVAL);
@@ -180,7 +180,7 @@ pub fn handle_syscall(
             let pathname_ptr = arg1 as *const u8;
             let flags = arg2 as i32;
             let mode = arg3 as u32;
-            
+
             // Validate pathname pointer
             if pathname_ptr.is_null() {
                 return Err(errno::EFAULT);

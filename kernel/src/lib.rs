@@ -3,6 +3,7 @@
 //! Core kernel functionality and initialization.
 
 #![no_std]
+#![allow(clippy::result_unit_err)]
 
 extern crate alloc;
 extern crate rinux_mm as mm;

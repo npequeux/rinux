@@ -155,7 +155,11 @@ pub trait Socket: Send + Sync {
     fn sendto(&mut self, data: &[u8], addr: SocketAddr, flags: u32) -> Result<usize, SocketError>;
 
     /// Receive data with source address (for datagram sockets)
-    fn recvfrom(&mut self, buffer: &mut [u8], flags: u32) -> Result<(usize, SocketAddr), SocketError>;
+    fn recvfrom(
+        &mut self,
+        buffer: &mut [u8],
+        flags: u32,
+    ) -> Result<(usize, SocketAddr), SocketError>;
 
     /// Shutdown socket
     fn shutdown(&mut self, how: ShutdownHow) -> Result<(), SocketError>;
@@ -256,6 +260,12 @@ pub struct SocketTable {
     sockets: Vec<Option<Arc<Mutex<dyn Socket>>>>,
 }
 
+impl Default for SocketTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SocketTable {
     pub fn new() -> Self {
         SocketTable {
@@ -299,22 +309,28 @@ impl SocketTable {
 }
 
 /// Global socket table
-static SOCKET_TABLE: Mutex<SocketTable> = Mutex::new(SocketTable { sockets: Vec::new() });
+static SOCKET_TABLE: Mutex<SocketTable> = Mutex::new(SocketTable {
+    sockets: Vec::new(),
+});
 
 /// Create a socket
-pub fn socket(domain: SocketDomain, socket_type: SocketType, protocol: SocketProtocol) -> Result<i32, SocketError> {
+pub fn socket(
+    domain: SocketDomain,
+    socket_type: SocketType,
+    protocol: SocketProtocol,
+) -> Result<i32, SocketError> {
     // Create appropriate socket implementation based on domain/type/protocol
     match (domain, socket_type, protocol) {
-        (SocketDomain::Inet, SocketType::Stream, SocketProtocol::Tcp) | 
-        (SocketDomain::Inet, SocketType::Stream, SocketProtocol::Default) => {
+        (SocketDomain::Inet, SocketType::Stream, SocketProtocol::Tcp)
+        | (SocketDomain::Inet, SocketType::Stream, SocketProtocol::Default) => {
             // Create TCP socket
             // let tcp_socket = crate::net::tcp::TcpSocket::new()?;
             // let fd = SOCKET_TABLE.lock().add(Arc::new(Mutex::new(tcp_socket)));
             // Ok(fd)
             Err(SocketError::NotSupported)
         }
-        (SocketDomain::Inet, SocketType::Dgram, SocketProtocol::Udp) |
-        (SocketDomain::Inet, SocketType::Dgram, SocketProtocol::Default) => {
+        (SocketDomain::Inet, SocketType::Dgram, SocketProtocol::Udp)
+        | (SocketDomain::Inet, SocketType::Dgram, SocketProtocol::Default) => {
             // Create UDP socket
             // let udp_socket = crate::net::udp::UdpSocket::new()?;
             // let fd = SOCKET_TABLE.lock().add(Arc::new(Mutex::new(udp_socket)));
@@ -378,7 +394,11 @@ pub fn sendto(fd: i32, data: &[u8], addr: SocketAddr, flags: u32) -> Result<usiz
 }
 
 /// Receive data with source address
-pub fn recvfrom(fd: i32, buffer: &mut [u8], flags: u32) -> Result<(usize, SocketAddr), SocketError> {
+pub fn recvfrom(
+    fd: i32,
+    buffer: &mut [u8],
+    flags: u32,
+) -> Result<(usize, SocketAddr), SocketError> {
     let socket = SOCKET_TABLE.lock().get(fd).ok_or(SocketError::InvalidArg)?;
     let result = socket.lock().recvfrom(buffer, flags);
     result
@@ -393,7 +413,10 @@ pub fn shutdown(fd: i32, how: ShutdownHow) -> Result<(), SocketError> {
 
 /// Close socket
 pub fn close_socket(fd: i32) -> Result<(), SocketError> {
-    let socket = SOCKET_TABLE.lock().remove(fd).ok_or(SocketError::InvalidArg)?;
+    let socket = SOCKET_TABLE
+        .lock()
+        .remove(fd)
+        .ok_or(SocketError::InvalidArg)?;
     let result = socket.lock().close();
     result
 }

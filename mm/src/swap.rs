@@ -2,9 +2,9 @@
 //!
 //! Manages swapping pages to/from disk when memory is low.
 
-use core::sync::atomic::{AtomicU64, AtomicBool, Ordering};
-use spin::Mutex;
 use alloc::collections::VecDeque;
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use spin::Mutex;
 
 /// Swap statistics
 static SWAP_IN_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -192,10 +192,10 @@ pub fn swap_out(virt_addr: u64, phys_addr: u64) -> Result<SwapEntry, &'static st
     // 1. Get block device driver for swap device
     // 2. Write 4KB at entry.offset * 4096
     // 3. Wait for I/O completion
-    
+
     // For now, just pretend we wrote it
     let _ = (virt_addr, phys_addr);
-    
+
     SWAP_OUT_COUNT.fetch_add(1, Ordering::SeqCst);
     Ok(entry)
 }
@@ -220,7 +220,7 @@ pub fn swap_in(entry: SwapEntry, phys_addr: u64) -> Result<(), &'static str> {
     // 1. Get block device driver for swap device
     // 2. Read 4KB from entry.offset * 4096 into phys_addr
     // 3. Wait for I/O completion
-    
+
     // For now, just pretend we read it
     let _ = (entry, phys_addr);
 
@@ -268,7 +268,7 @@ mod tests {
         let entry = SwapEntry::new(5, 12345);
         let encoded = entry.encode();
         let decoded = SwapEntry::decode(encoded);
-        
+
         assert_eq!(entry, decoded);
         assert_eq!(decoded.device, 5);
         assert_eq!(decoded.offset, 12345);
@@ -278,11 +278,11 @@ mod tests {
     fn test_swap_entry_is_swap() {
         let swap_entry = SwapEntry::new(1, 100).encode();
         assert!(SwapEntry::is_swap_entry(swap_entry));
-        
+
         // Present page (bit 0 = 1) is not a swap entry
         let present_page = 0x1234_5001;
         assert!(!SwapEntry::is_swap_entry(present_page));
-        
+
         // Zero is not a swap entry
         assert!(!SwapEntry::is_swap_entry(0));
     }
@@ -291,11 +291,11 @@ mod tests {
     fn test_swap_device_allocation() {
         let mut device = SwapDevice::new(0, 100);
         assert_eq!(device.free_pages(), 100);
-        
+
         let entry = device.allocate().unwrap();
         assert_eq!(device.free_pages(), 99);
         assert_eq!(entry.device, 0);
-        
+
         device.deallocate(entry.offset);
         assert_eq!(device.free_pages(), 100);
     }
@@ -304,13 +304,13 @@ mod tests {
     fn test_swap_manager() {
         let mut manager = SwapManager::new();
         manager.add_device(0, 100);
-        
+
         assert_eq!(manager.total_swap(), 100 * 4096);
         assert_eq!(manager.free_swap_space(), 100 * 4096);
-        
+
         let entry = manager.allocate_swap().unwrap();
         assert_eq!(manager.free_swap_space(), 99 * 4096);
-        
+
         manager.free_swap(entry);
         assert_eq!(manager.free_swap_space(), 100 * 4096);
     }

@@ -27,6 +27,12 @@ pub struct Pipe {
     write_closed: AtomicBool,
 }
 
+impl Default for Pipe {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Pipe {
     /// Create a new pipe
     pub fn new() -> Self {

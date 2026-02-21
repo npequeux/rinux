@@ -8,15 +8,15 @@ use alloc::string::String;
 /// NVMe controller capabilities
 #[repr(C)]
 pub struct NvmeCapabilities {
-    pub mqes: u16,      // Maximum Queue Entries Supported
-    pub cqr: bool,      // Contiguous Queues Required
-    pub ams: u8,        // Arbitration Mechanism Supported
-    pub to: u8,         // Timeout
-    pub dstrd: u8,      // Doorbell Stride
-    pub nssrs: bool,    // NVM Subsystem Reset Supported
-    pub css: u8,        // Command Sets Supported
-    pub mpsmin: u8,     // Memory Page Size Minimum
-    pub mpsmax: u8,     // Memory Page Size Maximum
+    pub mqes: u16,   // Maximum Queue Entries Supported
+    pub cqr: bool,   // Contiguous Queues Required
+    pub ams: u8,     // Arbitration Mechanism Supported
+    pub to: u8,      // Timeout
+    pub dstrd: u8,   // Doorbell Stride
+    pub nssrs: bool, // NVM Subsystem Reset Supported
+    pub css: u8,     // Command Sets Supported
+    pub mpsmin: u8,  // Memory Page Size Minimum
+    pub mpsmax: u8,  // Memory Page Size Maximum
 }
 
 /// NVMe Admin Command Opcodes
@@ -42,19 +42,25 @@ pub enum NvmeIoOp {
 /// NVMe Command
 #[repr(C)]
 pub struct NvmeCommand {
-    pub cdw0: u32,      // Command Dword 0
-    pub nsid: u32,      // Namespace ID
+    pub cdw0: u32, // Command Dword 0
+    pub nsid: u32, // Namespace ID
     pub cdw2: u32,
     pub cdw3: u32,
-    pub mptr: u64,      // Metadata Pointer
-    pub prp1: u64,      // PRP Entry 1
-    pub prp2: u64,      // PRP Entry 2
+    pub mptr: u64, // Metadata Pointer
+    pub prp1: u64, // PRP Entry 1
+    pub prp2: u64, // PRP Entry 2
     pub cdw10: u32,
     pub cdw11: u32,
     pub cdw12: u32,
     pub cdw13: u32,
     pub cdw14: u32,
     pub cdw15: u32,
+}
+
+impl Default for NvmeCommand {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl NvmeCommand {
@@ -133,7 +139,7 @@ impl NvmeDevice {
         // - Namespace size
         // - Block size
         // - Features
-        
+
         Err("Not implemented")
     }
 }
@@ -147,7 +153,7 @@ impl BlockDevice for NvmeDevice {
         // 4. Ring doorbell
         // 5. Wait for completion in completion queue
         // 6. Check status and copy data
-        
+
         let _ = (start_block, buffer);
         Err("Not implemented")
     }
@@ -155,7 +161,7 @@ impl BlockDevice for NvmeDevice {
     fn write_blocks(&self, start_block: u64, buffer: &[u8]) -> Result<usize, &'static str> {
         // TODO: Implement NVMe write
         // Similar to read but with WRITE command
-        
+
         let _ = (start_block, buffer);
         Err("Not implemented")
     }
@@ -204,7 +210,7 @@ impl NvmeController {
         // 6. Set number of queues
         // 7. Create I/O queues
         // 8. Identify namespaces
-        
+
         self.identify_namespaces()?;
         Ok(())
     }

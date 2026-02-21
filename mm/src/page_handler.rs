@@ -20,6 +20,12 @@ pub struct PageFlags {
     pub no_execute: bool,
 }
 
+impl Default for PageFlags {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PageFlags {
     pub const fn new() -> Self {
         Self {
@@ -38,16 +44,36 @@ impl PageFlags {
 
     pub fn to_bits(&self) -> u64 {
         let mut bits = 0u64;
-        if self.present { bits |= 1 << 0; }
-        if self.writable { bits |= 1 << 1; }
-        if self.user { bits |= 1 << 2; }
-        if self.write_through { bits |= 1 << 3; }
-        if self.cache_disabled { bits |= 1 << 4; }
-        if self.accessed { bits |= 1 << 5; }
-        if self.dirty { bits |= 1 << 6; }
-        if self.huge { bits |= 1 << 7; }
-        if self.global { bits |= 1 << 8; }
-        if self.no_execute { bits |= 1 << 63; }
+        if self.present {
+            bits |= 1 << 0;
+        }
+        if self.writable {
+            bits |= 1 << 1;
+        }
+        if self.user {
+            bits |= 1 << 2;
+        }
+        if self.write_through {
+            bits |= 1 << 3;
+        }
+        if self.cache_disabled {
+            bits |= 1 << 4;
+        }
+        if self.accessed {
+            bits |= 1 << 5;
+        }
+        if self.dirty {
+            bits |= 1 << 6;
+        }
+        if self.huge {
+            bits |= 1 << 7;
+        }
+        if self.global {
+            bits |= 1 << 8;
+        }
+        if self.no_execute {
+            bits |= 1 << 63;
+        }
         bits
     }
 
@@ -72,6 +98,12 @@ impl PageFlags {
 #[derive(Clone, Copy)]
 pub struct PageTableEntry {
     entry: u64,
+}
+
+impl Default for PageTableEntry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PageTableEntry {
@@ -104,6 +136,12 @@ impl PageTableEntry {
 #[repr(C, align(4096))]
 pub struct PageTable {
     entries: [PageTableEntry; 512],
+}
+
+impl Default for PageTable {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PageTable {
@@ -174,7 +212,7 @@ fn map_page(virt_addr: u64, writable: bool, user: bool) -> Result<(), &'static s
     // Get current page table
     let cr3 = read_cr3();
     let pml4_phys = cr3 & !0xFFF;
-    
+
     // Convert physical address to virtual for access
     // In kernel, we assume identity mapping or higher-half mapping
     let pml4 = unsafe { &mut *(pml4_phys as *mut PageTable) };
@@ -192,12 +230,12 @@ fn map_page(virt_addr: u64, writable: bool, user: bool) -> Result<(), &'static s
 
     // Map the page
     let entry = pt.get_entry_mut(pt_idx).ok_or("Invalid PT index")?;
-    
+
     let mut flags = PageFlags::new();
     flags.present = true;
     flags.writable = writable;
     flags.user = user;
-    
+
     entry.set(phys_frame.start_address(), flags);
 
     // Clear the new page
@@ -212,7 +250,11 @@ fn map_page(virt_addr: u64, writable: bool, user: bool) -> Result<(), &'static s
 }
 
 /// Get or create intermediate page table
-fn get_or_create_table(parent: &mut PageTable, index: usize, user: bool) -> Result<&mut PageTable, &'static str> {
+fn get_or_create_table(
+    parent: &mut PageTable,
+    index: usize,
+    user: bool,
+) -> Result<&mut PageTable, &'static str> {
     let entry = parent.get_entry_mut(index).ok_or("Invalid table index")?;
 
     if entry.is_present() {
@@ -223,7 +265,7 @@ fn get_or_create_table(parent: &mut PageTable, index: usize, user: bool) -> Resu
         // Create new table
         let phys_frame = allocate_frame().ok_or("Out of memory")?;
         let phys_addr = phys_frame.start_address();
-        
+
         // Clear the new table
         unsafe {
             ptr::write_bytes(phys_addr as *mut u8, 0, 4096);
@@ -233,7 +275,7 @@ fn get_or_create_table(parent: &mut PageTable, index: usize, user: bool) -> Resu
         flags.present = true;
         flags.writable = true;
         flags.user = user;
-        
+
         entry.set(phys_addr, flags);
 
         Ok(unsafe { &mut *(phys_addr as *mut PageTable) })

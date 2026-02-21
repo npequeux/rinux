@@ -54,12 +54,12 @@ impl Partition {
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy)]
 pub struct MbrPartitionEntry {
-    pub status: u8,          // 0x80 = bootable, 0x00 = inactive
-    pub first_chs: [u8; 3],  // First sector in CHS
+    pub status: u8,         // 0x80 = bootable, 0x00 = inactive
+    pub first_chs: [u8; 3], // First sector in CHS
     pub partition_type: u8,
-    pub last_chs: [u8; 3],   // Last sector in CHS
-    pub first_lba: u32,      // First sector in LBA
-    pub size: u32,           // Size in sectors
+    pub last_chs: [u8; 3], // Last sector in CHS
+    pub first_lba: u32,    // First sector in LBA
+    pub size: u32,         // Size in sectors
 }
 
 /// MBR (Master Boot Record)
@@ -69,7 +69,7 @@ pub struct Mbr {
     pub disk_signature: u32,
     pub reserved: u16,
     pub partitions: [MbrPartitionEntry; 4],
-    pub signature: u16,  // Must be 0xAA55
+    pub signature: u16, // Must be 0xAA55
 }
 
 impl Mbr {
@@ -93,7 +93,7 @@ impl Mbr {
     /// Get all partitions
     pub fn get_partitions(&self) -> Vec<Partition> {
         let mut partitions = Vec::new();
-        
+
         for (i, entry) in self.partitions.iter().enumerate() {
             if entry.partition_type == 0 {
                 continue; // Empty partition
@@ -115,7 +115,7 @@ impl Mbr {
                 bootable: entry.status == 0x80,
             });
         }
-        
+
         partitions
     }
 }
@@ -123,7 +123,7 @@ impl Mbr {
 /// GPT header
 #[repr(C, packed)]
 pub struct GptHeader {
-    pub signature: [u8; 8],       // "EFI PART"
+    pub signature: [u8; 8], // "EFI PART"
     pub revision: u32,
     pub header_size: u32,
     pub header_crc32: u32,
@@ -166,7 +166,7 @@ pub struct GptPartitionEntry {
     pub starting_lba: u64,
     pub ending_lba: u64,
     pub attributes: u64,
-    pub partition_name: [u16; 36],  // UTF-16LE
+    pub partition_name: [u16; 36], // UTF-16LE
 }
 
 impl GptPartitionEntry {
@@ -179,26 +179,26 @@ impl GptPartitionEntry {
     pub fn get_type(&self) -> PartitionType {
         // Linux filesystem: 0FC63DAF-8483-4772-8E79-3D69D8477DE4
         const LINUX_FS: [u8; 16] = [
-            0xAF, 0x3D, 0xC6, 0x0F, 0x83, 0x84, 0x72, 0x47,
-            0x8E, 0x79, 0x3D, 0x69, 0xD8, 0x47, 0x7D, 0xE4,
+            0xAF, 0x3D, 0xC6, 0x0F, 0x83, 0x84, 0x72, 0x47, 0x8E, 0x79, 0x3D, 0x69, 0xD8, 0x47,
+            0x7D, 0xE4,
         ];
 
         // Linux swap: 0657FD6D-A4AB-43C4-84E5-0933C84B4F4F
         const LINUX_SWAP: [u8; 16] = [
-            0x6D, 0xFD, 0x57, 0x06, 0xAB, 0xA4, 0xC4, 0x43,
-            0x84, 0xE5, 0x09, 0x33, 0xC8, 0x4B, 0x4F, 0x4F,
+            0x6D, 0xFD, 0x57, 0x06, 0xAB, 0xA4, 0xC4, 0x43, 0x84, 0xE5, 0x09, 0x33, 0xC8, 0x4B,
+            0x4F, 0x4F,
         ];
 
         // EFI System: C12A7328-F81F-11D2-BA4B-00A0C93EC93B
         const EFI_SYSTEM: [u8; 16] = [
-            0x28, 0x73, 0x2A, 0xC1, 0x1F, 0xF8, 0xD2, 0x11,
-            0xBA, 0x4B, 0x00, 0xA0, 0xC9, 0x3E, 0xC9, 0x3B,
+            0x28, 0x73, 0x2A, 0xC1, 0x1F, 0xF8, 0xD2, 0x11, 0xBA, 0x4B, 0x00, 0xA0, 0xC9, 0x3E,
+            0xC9, 0x3B,
         ];
 
         // Microsoft Basic Data: EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
         const MS_BASIC: [u8; 16] = [
-            0xA2, 0xA0, 0xD0, 0xEB, 0xE5, 0xB9, 0x33, 0x44,
-            0x87, 0xC0, 0x68, 0xB6, 0xB7, 0x26, 0x99, 0xC7,
+            0xA2, 0xA0, 0xD0, 0xEB, 0xE5, 0xB9, 0x33, 0x44, 0x87, 0xC0, 0x68, 0xB6, 0xB7, 0x26,
+            0x99, 0xC7,
         ];
 
         match self.type_guid {

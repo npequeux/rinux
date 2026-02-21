@@ -2,7 +2,7 @@
 //!
 //! Higher-level paging operations on top of architecture-specific code.
 
-use crate::frame::{Frame, allocate_frame};
+use crate::frame::{allocate_frame, Frame};
 use core::sync::atomic::{AtomicBool, Ordering};
 use spin::Mutex;
 
@@ -122,7 +122,7 @@ impl VirtAddr {
     }
 
     pub fn is_aligned(&self, align: u64) -> bool {
-        self.0 % align == 0
+        self.0.is_multiple_of(align)
     }
 
     pub fn page_offset(&self) -> u64 {
@@ -157,14 +157,14 @@ impl PhysAddr {
     }
 
     pub fn is_aligned(&self, align: u64) -> bool {
-        self.0 % align == 0
+        self.0.is_multiple_of(align)
     }
 
     pub fn zone(&self) -> MemoryZone {
         match self.0 {
-            0..=0xFF_FFFF => MemoryZone::Dma,           // 0-16MB
+            0..=0xFF_FFFF => MemoryZone::Dma,               // 0-16MB
             0x100_0000..=0x37FF_FFFF => MemoryZone::Normal, // 16MB-896MB
-            _ => MemoryZone::High,                      // >896MB
+            _ => MemoryZone::High,                          // >896MB
         }
     }
 }
@@ -272,6 +272,12 @@ pub struct PageTable {
     entries: [PageTableEntry; 512],
 }
 
+impl Default for PageTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PageTable {
     pub const fn new() -> Self {
         PageTable {
@@ -285,12 +291,6 @@ impl PageTable {
 
     pub fn get_entry_mut(&mut self, index: usize) -> Option<&mut PageTableEntry> {
         self.entries.get_mut(index)
-    }
-}
-
-impl Default for PageTable {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -333,7 +333,7 @@ impl PageMapper {
             ((addr >> 12) & 0x1FF) as usize, // PT
         ]
     }
-    
+
     /// Safely access a page table by physical address
     ///
     /// # Safety
@@ -360,56 +360,58 @@ impl PageMapper {
         #[cfg(target_arch = "x86_64")]
         {
             let indices = Self::page_indices(virt);
-            
+
             // Walk page tables, creating them if needed
             let mut current_table_phys = self.root;
-            
+
             // For each level (except the last), ensure the next level exists
+            #[allow(clippy::needless_range_loop)]
             for level in 0..3 {
                 // SAFETY: We assume identity mapping for page tables. This is a limitation
                 // of the current implementation and should be improved with proper mapping.
                 let table = unsafe { Self::access_page_table(current_table_phys) };
-                
-                let entry = table.get_entry_mut(indices[level])
+
+                let entry = table
+                    .get_entry_mut(indices[level])
                     .ok_or("Invalid page table index")?;
-                
+
                 if !entry.is_present() {
                     // Allocate a new page table
-                    let new_frame = allocate_frame()
-                        .ok_or("Out of memory")?;
-                    
+                    let new_frame = allocate_frame().ok_or("Out of memory")?;
+
                     // Zero the new page table
                     let new_table_ptr = new_frame.start_address() as *mut PageTable;
                     unsafe {
                         core::ptr::write_bytes(new_table_ptr, 0, 1);
                     }
-                    
+
                     // Set the entry to point to the new table
                     entry.set(PhysAddr::new(new_frame.start_address()), true, user);
                 }
-                
+
                 current_table_phys = entry.addr();
             }
-            
+
             // Now map the final page
             let table_ptr = current_table_phys.as_u64() as *mut PageTable;
             let table = unsafe { &mut *table_ptr };
-            
-            let entry = table.get_entry_mut(indices[3])
+
+            let entry = table
+                .get_entry_mut(indices[3])
                 .ok_or("Invalid page table index")?;
-            
+
             if entry.is_present() {
                 return Err("Page already mapped");
             }
-            
+
             entry.set(phys, writable, user);
-            
+
             // Flush TLB for this address
             tlb::shootdown_all(virt.as_u64());
-            
+
             Ok(())
         }
-        
+
         #[cfg(not(target_arch = "x86_64"))]
         {
             let _ = (virt, phys, writable, user);
@@ -422,46 +424,49 @@ impl PageMapper {
         #[cfg(target_arch = "x86_64")]
         {
             let indices = Self::page_indices(virt);
-            
+
             // Walk to the final page table
             let mut current_table_phys = self.root;
-            
+
+            #[allow(clippy::needless_range_loop)]
             for level in 0..3 {
                 let table_ptr = current_table_phys.as_u64() as *const PageTable;
                 let table = unsafe { &*table_ptr };
-                
-                let entry = table.get_entry(indices[level])
+
+                let entry = table
+                    .get_entry(indices[level])
                     .ok_or("Invalid page table index")?;
-                
+
                 if !entry.is_present() {
                     return Err("Page not mapped");
                 }
-                
+
                 current_table_phys = entry.addr();
             }
-            
+
             // Unmap the page
             let table_ptr = current_table_phys.as_u64() as *mut PageTable;
             let table = unsafe { &mut *table_ptr };
-            
-            let entry = table.get_entry_mut(indices[3])
+
+            let entry = table
+                .get_entry_mut(indices[3])
                 .ok_or("Invalid page table index")?;
-            
+
             if !entry.is_present() {
                 return Err("Page not mapped");
             }
-            
+
             let phys_addr = entry.addr();
             let frame = Frame::containing_address(phys_addr.as_u64());
-            
+
             entry.clear();
-            
+
             // Flush TLB
             tlb::shootdown_all(virt.as_u64());
-            
+
             Ok(frame)
         }
-        
+
         #[cfg(not(target_arch = "x86_64"))]
         {
             let _ = virt;
@@ -475,36 +480,37 @@ impl PageMapper {
         {
             let indices = Self::page_indices(virt);
             let mut current_table_phys = self.root;
-            
+
             // Walk the page tables
+            #[allow(clippy::needless_range_loop)]
             for level in 0..4 {
                 let table_ptr = current_table_phys.as_u64() as *const PageTable;
                 let table = unsafe { &*table_ptr };
-                
+
                 let entry = table.get_entry(indices[level])?;
-                
+
                 if !entry.is_present() {
                     return None;
                 }
-                
+
                 // Check for huge pages at level 2 (1GB) or level 3 (2MB)
                 if level >= 2 && entry.is_huge() {
                     let page_offset = virt.as_u64() & ((1 << (12 + 9 * (3 - level))) - 1);
                     return Some(PhysAddr::new(entry.addr().as_u64() + page_offset));
                 }
-                
+
                 if level == 3 {
                     // Final level - add page offset
                     let page_offset = virt.page_offset();
                     return Some(PhysAddr::new(entry.addr().as_u64() + page_offset));
                 }
-                
+
                 current_table_phys = entry.addr();
             }
-            
+
             None
         }
-        
+
         #[cfg(not(target_arch = "x86_64"))]
         {
             let _ = virt;
@@ -530,55 +536,57 @@ impl PageMapper {
         {
             let indices = Self::page_indices(virt);
             let mut current_table_phys = self.root;
-            
+
             // Determine how many levels to walk (2 for 1GB, 3 for 2MB)
             let target_level = match size {
                 HugePageSize::Size1GB => 2,
                 HugePageSize::Size2MB => 3,
             };
-            
+
             // Walk to the target level
+            #[allow(clippy::needless_range_loop)]
             for level in 0..target_level {
                 let table_ptr = current_table_phys.as_u64() as *mut PageTable;
                 let table = unsafe { &mut *table_ptr };
-                
-                let entry = table.get_entry_mut(indices[level])
+
+                let entry = table
+                    .get_entry_mut(indices[level])
                     .ok_or("Invalid page table index")?;
-                
+
                 if !entry.is_present() {
-                    let new_frame = allocate_frame()
-                        .ok_or("Out of memory")?;
-                    
+                    let new_frame = allocate_frame().ok_or("Out of memory")?;
+
                     let new_table_ptr = new_frame.start_address() as *mut PageTable;
                     unsafe {
                         core::ptr::write_bytes(new_table_ptr, 0, 1);
                     }
-                    
+
                     entry.set(PhysAddr::new(new_frame.start_address()), true, user);
                 }
-                
+
                 current_table_phys = entry.addr();
             }
-            
+
             // Set huge page entry
             let table_ptr = current_table_phys.as_u64() as *mut PageTable;
             let table = unsafe { &mut *table_ptr };
-            
-            let entry = table.get_entry_mut(indices[target_level])
+
+            let entry = table
+                .get_entry_mut(indices[target_level])
                 .ok_or("Invalid page table index")?;
-            
+
             if entry.is_present() {
                 return Err("Page already mapped");
             }
-            
+
             entry.set_huge(phys, writable, user);
-            
+
             // Flush TLB
             tlb::shootdown_all(virt.as_u64());
-            
+
             Ok(())
         }
-        
+
         #[cfg(not(target_arch = "x86_64"))]
         {
             let _ = (virt, phys, size, writable, user);
@@ -615,11 +623,7 @@ pub fn init_numa() {
 
 /// Get NUMA node count
 pub fn numa_node_count() -> usize {
-    NUMA_NODES
-        .lock()
-        .as_ref()
-        .map(|n| n.len())
-        .unwrap_or(1)
+    NUMA_NODES.lock().as_ref().map(|n| n.len()).unwrap_or(1)
 }
 
 /// Get NUMA node for a physical address

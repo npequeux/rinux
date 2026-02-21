@@ -31,6 +31,12 @@ pub struct MemoryContext {
     pub stack_end: u64,
 }
 
+impl Default for MemoryContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryContext {
     /// Create a new memory context
     pub fn new() -> Self {
@@ -46,24 +52,24 @@ impl MemoryContext {
     /// Clone the memory context (copy-on-write implementation)
     pub fn clone_for_fork(&self) -> Result<Self, &'static str> {
         use rinux_mm::frame;
-        
+
         // Create a new page table for the child
-        let new_page_table_frame = frame::allocate_frame()
-            .ok_or("Failed to allocate page table")?;
+        let new_page_table_frame =
+            frame::allocate_frame().ok_or("Failed to allocate page table")?;
         let new_page_table = new_page_table_frame.start_address();
-        
+
         // Zero the new page table
         unsafe {
             let ptr = new_page_table as *mut u8;
             core::ptr::write_bytes(ptr, 0, 4096);
         }
-        
+
         // In a full implementation, we would:
         // 1. Copy the kernel page table mappings (upper half)
         // 2. For user mappings (lower half), mark all pages as read-only
         //    and set COW bit in both parent and child
         // 3. This allows sharing physical frames until write occurs
-        
+
         // For now, return a simple clone
         // TODO: Implement full COW page table cloning
         Ok(Self {
@@ -98,6 +104,12 @@ pub struct RegisterState {
     pub r15: u64,
     pub rip: u64,
     pub rflags: u64,
+}
+
+impl Default for RegisterState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RegisterState {

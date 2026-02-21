@@ -114,6 +114,12 @@ pub struct SlabAllocator {
     fallback: BumpAllocator,
 }
 
+impl Default for SlabAllocator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SlabAllocator {
     /// Create a new slab allocator
     pub const fn new() -> Self {
@@ -148,6 +154,7 @@ impl SlabAllocator {
         // Allocate initial slabs for each size class
         // We pre-allocate all slab memory at once to avoid borrow issues
         let mut slab_memories: [Option<*mut u8>; NUM_SIZE_CLASSES] = [None; NUM_SIZE_CLASSES];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..NUM_SIZE_CLASSES {
             slab_memories[i] = self.allocate_slab_memory();
         }
@@ -217,6 +224,12 @@ pub struct BumpAllocator {
     heap_start: usize,
     heap_end: usize,
     next: usize,
+}
+
+impl Default for BumpAllocator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BumpAllocator {

@@ -27,6 +27,12 @@ pub struct FileDescriptorTable {
     entries: Vec<FdEntry>,
 }
 
+impl Default for FileDescriptorTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FileDescriptorTable {
     /// Create a new file descriptor table
     pub fn new() -> Self {
