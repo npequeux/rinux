@@ -21,7 +21,9 @@ pub enum IntelGeneration {
 pub struct IntelGpu {
     pci_device: PciDevice,
     generation: IntelGeneration,
+    #[allow(dead_code)]
     gtt_base: u64,
+    #[allow(dead_code)]
     mmio_base: u64,
 }
 
@@ -68,7 +70,7 @@ impl IntelGpu {
     fn detect_generation(device_id: u16) -> IntelGeneration {
         match device_id {
             // Gen6 (Sandy Bridge)
-            0x0102..=0x016A => IntelGeneration::Gen6,
+            0x0102..=0x0161 => IntelGeneration::Gen6,
             // Gen7 (Ivy Bridge, Haswell)
             0x0162..=0x0426 => IntelGeneration::Gen7,
             // Gen8 (Broadwell)
@@ -86,6 +88,7 @@ impl IntelGpu {
     }
 
     /// Read MMIO register
+    #[allow(dead_code)]
     unsafe fn read_mmio(&self, offset: u32) -> u32 {
         if self.mmio_base == 0 {
             return 0;
@@ -95,6 +98,7 @@ impl IntelGpu {
     }
 
     /// Write MMIO register
+    #[allow(dead_code)]
     unsafe fn write_mmio(&self, offset: u32, value: u32) {
         if self.mmio_base == 0 {
             return;

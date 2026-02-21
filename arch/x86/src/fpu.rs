@@ -21,6 +21,12 @@ pub struct FxsaveArea {
     _reserved2: [u128; 3],
 }
 
+impl Default for FxsaveArea {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FxsaveArea {
     /// Create a new FPU context with default values
     pub const fn new() -> Self {
@@ -59,6 +65,12 @@ pub struct XsaveHeader {
 /// FPU state management
 pub struct FpuContext {
     area: FxsaveArea,
+}
+
+impl Default for FpuContext {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FpuContext {
@@ -125,20 +137,18 @@ pub fn has_avx() -> bool {
 pub fn enable_sse() {
     use crate::long_mode::{read_cr0, read_cr4, write_cr0, write_cr4};
 
-    unsafe {
-        // Clear CR0.EM (bit 2) - Enable FPU
-        // Set CR0.MP (bit 1) - Monitor coprocessor
-        let mut cr0 = read_cr0();
-        cr0 &= !(1 << 2); // Clear EM
-        cr0 |= 1 << 1; // Set MP
-        write_cr0(cr0);
+    // Clear CR0.EM (bit 2) - Enable FPU
+    // Set CR0.MP (bit 1) - Monitor coprocessor
+    let mut cr0 = read_cr0();
+    cr0 &= !(1 << 2); // Clear EM
+    cr0 |= 1 << 1; // Set MP
+    write_cr0(cr0);
 
-        // Set CR4.OSFXSR (bit 9) - Enable FXSAVE/FXRSTOR
-        // Set CR4.OSXMMEXCPT (bit 10) - Enable SSE exceptions
-        let mut cr4 = read_cr4();
-        cr4 |= (1 << 9) | (1 << 10);
-        write_cr4(cr4);
-    }
+    // Set CR4.OSFXSR (bit 9) - Enable FXSAVE/FXRSTOR
+    // Set CR4.OSXMMEXCPT (bit 10) - Enable SSE exceptions
+    let mut cr4 = read_cr4();
+    cr4 |= (1 << 9) | (1 << 10);
+    write_cr4(cr4);
 
     rinux_kernel::printk!("[FPU] SSE enabled\n");
 }
@@ -192,10 +202,8 @@ pub fn init() {
     enable_sse();
 
     // Try to enable AVX if available
-    if has_avx() {
-        if enable_avx() {
-            rinux_kernel::printk!("[FPU] AVX support enabled\n");
-        }
+    if has_avx() && enable_avx() {
+        rinux_kernel::printk!("[FPU] AVX support enabled\n");
     }
 
     // Initialize FPU state
@@ -213,6 +221,11 @@ pub fn init() {
 }
 
 /// Save extended state with XSAVE (if available)
+///
+/// # Safety
+///
+/// The caller must ensure that `area` points to a valid, properly aligned
+/// memory region large enough to hold the XSAVE state.
 pub unsafe fn xsave(area: *mut u8, mask: u64) {
     asm!(
         "xsave [{}]",
@@ -224,6 +237,11 @@ pub unsafe fn xsave(area: *mut u8, mask: u64) {
 }
 
 /// Restore extended state with XRSTOR (if available)
+///
+/// # Safety
+///
+/// The caller must ensure that `area` points to valid XSAVE state data
+/// that was previously saved with xsave.
 pub unsafe fn xrstor(area: *const u8, mask: u64) {
     asm!(
         "xrstor [{}]",

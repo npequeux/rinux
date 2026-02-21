@@ -20,12 +20,19 @@ const TIMEOUT_ITERATIONS: u32 = 1000;
 
 /// Keyboard commands
 const KB_CMD_SET_LEDS: u8 = 0xED;
+#[allow(dead_code)]
 const KB_CMD_ECHO: u8 = 0xEE;
+#[allow(dead_code)]
 const KB_CMD_SCAN_CODE_SET: u8 = 0xF0;
+#[allow(dead_code)]
 const KB_CMD_IDENTIFY: u8 = 0xF2;
+#[allow(dead_code)]
 const KB_CMD_TYPEMATIC: u8 = 0xF3;
+#[allow(dead_code)]
 const KB_CMD_ENABLE_SCAN: u8 = 0xF4;
+#[allow(dead_code)]
 const KB_CMD_DISABLE_SCAN: u8 = 0xF5;
+#[allow(dead_code)]
 const KB_CMD_RESET: u8 = 0xFF;
 
 /// Keyboard LEDs

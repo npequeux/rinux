@@ -34,6 +34,12 @@ pub struct BatteryInfo {
     pub temperature: i16,        // 0.1 Kelvin
 }
 
+impl Default for BatteryInfo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BatteryInfo {
     pub const fn new() -> Self {
         Self {
@@ -73,6 +79,12 @@ pub struct PowerManager {
     battery_info: BatteryInfo,
     power_source: PowerSource,
     is_laptop: bool,
+}
+
+impl Default for PowerManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PowerManager {
@@ -149,6 +161,7 @@ pub enum CpuGovernor {
 static mut POWER_MANAGER: PowerManager = PowerManager::new();
 
 /// Initialize power management
+#[allow(static_mut_refs)]
 pub fn init() {
     rinux_kernel::printk::printk("  Initializing power management...\n");
 
@@ -158,6 +171,7 @@ pub fn init() {
 }
 
 /// Get power manager instance
+#[allow(static_mut_refs)]
 pub fn get() -> &'static mut PowerManager {
     unsafe { &mut POWER_MANAGER }
 }

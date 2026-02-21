@@ -78,7 +78,7 @@ impl FrameAllocator {
     }
 
     /// Check if a frame is allocated
-    fn is_allocated(&self, frame_number: u64) -> bool {
+    pub fn is_allocated(&self, frame_number: u64) -> bool {
         if frame_number < self.start_frame {
             return true;
         }
@@ -95,7 +95,7 @@ impl FrameAllocator {
     }
 
     /// Mark a frame as allocated
-    fn mark_allocated(&mut self, frame_number: u64) {
+    pub fn mark_allocated(&mut self, frame_number: u64) {
         if frame_number < self.start_frame {
             return;
         }

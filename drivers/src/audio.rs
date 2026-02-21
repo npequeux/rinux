@@ -32,16 +32,20 @@ pub const INTEL_HDA_DEVICES: &[(u16, &str)] = &[
 ];
 
 /// HDA register offsets
+#[allow(dead_code)]
 const HDA_GCAP: u32 = 0x00; // Global Capabilities
 const HDA_VMIN: u32 = 0x02; // Minor Version
 const HDA_VMAJ: u32 = 0x03; // Major Version
 const HDA_GCTL: u32 = 0x08; // Global Control
 const HDA_STATESTS: u32 = 0x0E; // State Change Status
+#[allow(dead_code)]
 const HDA_INTCTL: u32 = 0x20; // Interrupt Control
+#[allow(dead_code)]
 const HDA_INTSTS: u32 = 0x24; // Interrupt Status
 
 /// HDA Global Control register bits
 const HDA_GCTL_RESET: u32 = 1 << 0;
+#[allow(dead_code)]
 const HDA_GCTL_ACCEPT_UNSOL: u32 = 1 << 8;
 
 /// Audio codec information
@@ -149,8 +153,8 @@ impl HdaController {
 
         unsafe {
             // Get version
-            let vmaj = self.read_reg(HDA_VMAJ);
-            let vmin = self.read_reg(HDA_VMIN);
+            let _vmaj = self.read_reg(HDA_VMAJ);
+            let _vmin = self.read_reg(HDA_VMIN);
 
             rinux_kernel::printk::printk("    HDA Version: ");
             // TODO: Print version numbers

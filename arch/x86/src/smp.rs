@@ -17,6 +17,12 @@ pub struct CpuInfo {
     pub started: AtomicBool,
 }
 
+impl Default for CpuInfo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CpuInfo {
     pub const fn new() -> Self {
         Self {
@@ -154,6 +160,7 @@ fn send_startup_ipi(apic_id: u32, vector: u8) {
 }
 
 /// Application Processor (AP) entry point
+#[allow(dead_code)]
 extern "C" fn ap_entry() -> ! {
     // Initialize APIC for this CPU
     apic::init();
@@ -174,13 +181,10 @@ extern "C" fn ap_entry() -> ! {
         }
     }
 
-    // TODO: Enter scheduler idle loop
-    loop {
-        crate::halt();
-    }
+    // Idle loop - halt until next interrupt
+    crate::halt()
 }
-
-/// Start an Application Processor
+#[allow(dead_code)]
 fn start_ap(cpu_id: u32) -> bool {
     unsafe {
         let apic_id = CPUS[cpu_id as usize].apic_id;
@@ -239,7 +243,7 @@ pub fn init() {
     rinux_kernel::printk!("[SMP] Detected {} CPU(s)\n", detected);
 
     // Try ACPI detection for more accurate info
-    let acpi_count = detect_cpus_acpi();
+    let _acpi_count = detect_cpus_acpi();
 
     if detected > 1 {
         rinux_kernel::printk!("[SMP] Multi-core detected, but AP startup not yet implemented\n");

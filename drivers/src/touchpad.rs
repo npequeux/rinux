@@ -14,8 +14,11 @@ const PS2_STATUS_OUTPUT_FULL: u8 = 0x01;
 const PS2_STATUS_INPUT_FULL: u8 = 0x02;
 
 /// PS/2 commands
+#[allow(dead_code)]
 const PS2_CMD_READ_CONFIG: u8 = 0x20;
+#[allow(dead_code)]
 const PS2_CMD_WRITE_CONFIG: u8 = 0x60;
+#[allow(dead_code)]
 const PS2_CMD_DISABLE_AUX: u8 = 0xA7;
 const PS2_CMD_ENABLE_AUX: u8 = 0xA8;
 const PS2_CMD_AUX_SEND: u8 = 0xD4;
@@ -41,6 +44,12 @@ pub struct Touchpad {
     is_intellimouse: bool,
     packet_state: u8,
     packet_buffer: [u8; 4],
+}
+
+impl Default for Touchpad {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Touchpad {
@@ -92,6 +101,11 @@ impl Touchpad {
     }
 
     /// Initialize the touchpad
+    ///
+    /// # Safety
+    ///
+    /// This function performs direct I/O port access and must be called only
+    /// during system initialization when no other code is accessing the PS/2 controller.
     pub unsafe fn init(&mut self) -> Result<(), &'static str> {
         // Enable auxiliary device (mouse/touchpad)
         self.wait_input();
@@ -176,6 +190,7 @@ impl Touchpad {
 static mut TOUCHPAD: Touchpad = Touchpad::new();
 
 /// Initialize touchpad
+#[allow(static_mut_refs)]
 pub fn init() {
     rinux_kernel::printk::printk("  Initializing touchpad...\n");
 
@@ -199,6 +214,7 @@ pub fn init() {
 }
 
 /// Get touchpad instance
+#[allow(static_mut_refs)]
 pub fn get() -> &'static mut Touchpad {
     unsafe { &mut TOUCHPAD }
 }

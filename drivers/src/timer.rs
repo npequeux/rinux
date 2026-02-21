@@ -2,7 +2,7 @@
 //!
 //! Programmable Interval Timer (PIT) driver for x86.
 
-use rinux_arch_x86::io::{inb, outb};
+use rinux_arch_x86::io::outb;
 use spin::Mutex;
 
 /// PIT frequency (1.193182 MHz)
