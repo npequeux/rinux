@@ -198,7 +198,7 @@ fn map_page(virt_addr: u64, writable: bool, user: bool) -> Result<(), &'static s
     flags.writable = writable;
     flags.user = user;
     
-    entry.set(phys_frame, flags);
+    entry.set(phys_frame.start_address(), flags);
 
     // Clear the new page
     unsafe {
@@ -222,10 +222,11 @@ fn get_or_create_table(parent: &mut PageTable, index: usize, user: bool) -> Resu
     } else {
         // Create new table
         let phys_frame = allocate_frame().ok_or("Out of memory")?;
+        let phys_addr = phys_frame.start_address();
         
         // Clear the new table
         unsafe {
-            ptr::write_bytes(phys_frame as *mut u8, 0, 4096);
+            ptr::write_bytes(phys_addr as *mut u8, 0, 4096);
         }
 
         let mut flags = PageFlags::new();
@@ -233,9 +234,9 @@ fn get_or_create_table(parent: &mut PageTable, index: usize, user: bool) -> Resu
         flags.writable = true;
         flags.user = user;
         
-        entry.set(phys_frame, flags);
+        entry.set(phys_addr, flags);
 
-        Ok(unsafe { &mut *(phys_frame as *mut PageTable) })
+        Ok(unsafe { &mut *(phys_addr as *mut PageTable) })
     }
 }
 
