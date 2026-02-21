@@ -6,11 +6,15 @@
 
 extern crate alloc;
 
+pub mod fs;
 pub mod init;
+pub mod ipc;
 pub mod panic;
 pub mod printk;
 pub mod process;
+pub mod signal;
 pub mod syscall;
+pub mod time;
 pub mod types;
 
 use core::sync::atomic::{AtomicBool, Ordering};
@@ -36,6 +40,18 @@ pub fn init() {
 
     // Initialize subsystems
     init::early_init();
+
+    // Initialize time subsystem
+    time::init();
+
+    // Initialize file system
+    fs::init();
+
+    // Initialize signal handling
+    signal::init();
+
+    // Initialize IPC
+    ipc::init();
 
     // Initialize scheduler
     process::sched::init();

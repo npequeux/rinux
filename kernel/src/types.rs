@@ -17,6 +17,9 @@ pub type Fd = i32;
 /// Error number
 pub type Errno = i32;
 
+/// Inode number
+pub type Inode = u64;
+
 /// Physical address
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
