@@ -5,6 +5,7 @@
 #![no_std]
 
 extern crate alloc;
+extern crate rinux_mm as mm;
 
 pub mod fs;
 pub mod init;
