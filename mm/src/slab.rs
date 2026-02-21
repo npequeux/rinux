@@ -117,12 +117,19 @@ pub struct SlabAllocator {
 impl SlabAllocator {
     /// Create a new slab allocator
     pub const fn new() -> Self {
-        let mut size_classes = [Slab::new(0); NUM_SIZE_CLASSES];
-        let mut i = 0;
-        while i < NUM_SIZE_CLASSES {
-            size_classes[i] = Slab::new(SIZE_CLASSES[i]);
-            i += 1;
-        }
+        // Initialize array with const values matching SIZE_CLASSES
+        let size_classes = [
+            Slab::new(16),
+            Slab::new(32),
+            Slab::new(64),
+            Slab::new(128),
+            Slab::new(256),
+            Slab::new(512),
+            Slab::new(1024),
+            Slab::new(2048),
+            Slab::new(4096),
+            Slab::new(8192),
+        ];
 
         SlabAllocator {
             size_classes,
@@ -139,8 +146,15 @@ impl SlabAllocator {
         self.fallback.init(heap_start, heap_size);
 
         // Allocate initial slabs for each size class
-        for slab in self.size_classes.iter_mut() {
-            if let Some(memory) = self.allocate_slab_memory() {
+        // We pre-allocate all slab memory at once to avoid borrow issues
+        let mut slab_memories: [Option<*mut u8>; NUM_SIZE_CLASSES] = [None; NUM_SIZE_CLASSES];
+        for i in 0..NUM_SIZE_CLASSES {
+            slab_memories[i] = self.allocate_slab_memory();
+        }
+        
+        // Initialize each slab with its allocated memory
+        for (i, slab) in self.size_classes.iter_mut().enumerate() {
+            if let Some(memory) = slab_memories[i] {
                 slab.initialize(memory);
             }
         }
@@ -172,13 +186,9 @@ impl SlabAllocator {
             }
 
             // Slab is full, try to allocate a new slab
-            if let Some(memory) = self.allocate_slab_memory() {
-                unsafe {
-                    let slab = &mut self.size_classes[class_idx];
-                    // For simplicity, we'll just use the fallback for now
-                    // In a real implementation, we'd track multiple slabs per size class
-                }
-            }
+            // For simplicity, we'll just use the fallback for now
+            // TODO: In a real implementation, we'd track multiple slabs per size class
+            // and initialize them here without double-borrowing
         }
 
         // Fall back to bump allocator for large allocations

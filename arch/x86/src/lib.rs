@@ -10,6 +10,7 @@ extern crate rinux_kernel as kernel;
 
 pub mod apic;
 pub mod boot;
+pub mod context;
 pub mod cpu;
 pub mod exceptions;
 pub mod fpu;
@@ -21,6 +22,7 @@ pub mod long_mode;
 pub mod memory;
 pub mod paging;
 pub mod smp;
+pub mod syscall;
 pub mod timers;
 
 /// Initialize x86_64 architecture
@@ -48,6 +50,9 @@ pub fn init() {
 
     // Initialize timers (TSC, HPET)
     timers::init();
+
+    // Initialize system call interface
+    syscall::init();
 
     // Initialize SMP
     smp::init();

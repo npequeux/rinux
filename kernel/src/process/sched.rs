@@ -149,10 +149,24 @@ pub fn init() {
 /// Schedule next task
 pub fn schedule() {
     let mut sched = SCHEDULER.lock();
-    if let Some(_next_pid) = sched.schedule_next() {
-        // TODO: Perform context switch to next_pid
-        // For now, just update the current task
+    if let Some(next_pid) = sched.schedule_next() {
+        // TODO: Perform actual context switch using arch-specific code
+        // For now, we're updating the scheduler state
+        // In a complete implementation, this would:
+        // 1. Save current task's CPU context
+        // 2. Load next task's CPU context
+        // 3. Switch page tables
+        // 4. Jump to next task
         drop(sched);
+
+        // Note: Context switching would be implemented like:
+        // if let Some(current_ctx) = get_current_context() {
+        //     if let Some(next_ctx) = get_task_context(next_pid) {
+        //         unsafe {
+        //             rinux_arch_x86::context::switch_context(current_ctx, next_ctx);
+        //         }
+        //     }
+        // }
     }
 }
 

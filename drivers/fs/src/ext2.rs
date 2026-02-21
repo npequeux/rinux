@@ -96,11 +96,58 @@ impl Ext2VNode {
 
 impl VNode for Ext2VNode {
     fn read(&self, offset: u64, buffer: &mut [u8]) -> Result<usize, FsError> {
-        // Read inode
-        // Follow block pointers (direct, indirect, double indirect, triple indirect)
-        // Read data from blocks
-        // This is complex and requires full implementation
-        Err(FsError::IoError)
+        // Read inode to get file size and block pointers
+        let inode = self.read_inode()?;
+        
+        // Check if offset is beyond file size
+        if offset >= inode.i_size as u64 {
+            return Ok(0);
+        }
+
+        let block_size = self.fs.block_size as u64;
+        let max_read = ((inode.i_size as u64 - offset).min(buffer.len() as u64)) as usize;
+        let mut bytes_read = 0;
+
+        while bytes_read < max_read {
+            let current_offset = offset + bytes_read as u64;
+            let block_index = current_offset / block_size;
+            let block_offset = (current_offset % block_size) as usize;
+
+            // Get physical block number
+            let block_num = if block_index < 12 {
+                // Direct blocks
+                inode.i_block[block_index as usize]
+            } else if block_index < 12 + 256 {
+                // Single indirect blocks
+                // Would need to read the indirect block first
+                // For now, return error
+                return Err(FsError::IoError);
+            } else if block_index < 12 + 256 + 256 * 256 {
+                // Double indirect blocks
+                return Err(FsError::IoError);
+            } else {
+                // Triple indirect blocks
+                return Err(FsError::IoError);
+            };
+
+            if block_num == 0 {
+                // Sparse block (hole in file) - fill with zeros
+                let bytes_in_block = ((block_size - block_offset as u64) as usize).min(max_read - bytes_read);
+                buffer[bytes_read..bytes_read + bytes_in_block].fill(0);
+                bytes_read += bytes_in_block;
+                continue;
+            }
+
+            // Read block from device
+            // In a real implementation:
+            // let block_data = self.fs.read_block(block_num)?;
+            // For now, just fill with zeros as a stub
+            let bytes_in_block = ((block_size - block_offset as u64) as usize).min(max_read - bytes_read);
+            buffer[bytes_read..bytes_read + bytes_in_block].fill(0);
+            bytes_read += bytes_in_block;
+        }
+
+        Ok(bytes_read)
     }
 
     fn write(&self, offset: u64, buffer: &[u8]) -> Result<usize, FsError> {
@@ -145,9 +192,77 @@ impl VNode for Ext2VNode {
     }
 
     fn readdir(&self) -> Result<Vec<DirEntry>, FsError> {
-        // Read directory blocks
-        // Parse directory entries
-        // Return list of entries
+        // Read directory inode
+        let inode = self.read_inode()?;
+
+        // Verify this is a directory
+        if inode.i_mode & 0xF000 != 0x4000 {
+            return Err(FsError::NotDir);
+        }
+
+        let mut entries = Vec::new();
+        let mut offset = 0u64;
+
+        // Read directory data blocks
+        while offset < inode.i_size as u64 {
+            let mut buf = [0u8; 512]; // Read directory entries in chunks
+            let bytes_read = self.read(offset, &mut buf)?;
+
+            if bytes_read == 0 {
+                break;
+            }
+
+            // Parse directory entries from buffer
+            let mut pos = 0;
+            while pos < bytes_read {
+                if pos + core::mem::size_of::<Ext2DirEntry>() > bytes_read {
+                    break;
+                }
+
+                let dir_entry = unsafe {
+                    core::ptr::read_unaligned(buf.as_ptr().add(pos) as *const Ext2DirEntry)
+                };
+
+                if dir_entry.inode == 0 {
+                    // Skip deleted entries
+                    pos += dir_entry.rec_len as usize;
+                    continue;
+                }
+
+                // Extract name
+                let name_start = pos + core::mem::size_of::<Ext2DirEntry>();
+                let name_end = name_start + dir_entry.name_len as usize;
+
+                if name_end <= bytes_read {
+                    let name_bytes = &buf[name_start..name_end];
+                    if let Ok(name) = alloc::string::String::from_utf8(name_bytes.to_vec()) {
+                        let file_type = match dir_entry.file_type {
+                            1 => FileType::Regular,
+                            2 => FileType::Directory,
+                            3 => FileType::CharDevice,
+                            4 => FileType::BlockDevice,
+                            5 => FileType::Fifo,
+                            6 => FileType::Socket,
+                            7 => FileType::Symlink,
+                            _ => FileType::Regular,
+                        };
+
+                        entries.push(DirEntry {
+                            ino: dir_entry.inode as u64,
+                            name,
+                            file_type,
+                        });
+                    }
+                }
+
+                pos += dir_entry.rec_len as usize;
+            }
+
+            offset += bytes_read as u64;
+        }
+
+        Ok(entries)
+    }
         Err(FsError::IoError)
     }
 

@@ -2,8 +2,7 @@
 //!
 //! Handles page faults and manages virtual memory.
 
-use crate::arch::x86::paging::{PageTableEntry, PageTableFlags, PageTable};
-use crate::mm::frame;
+use crate::frame;
 
 /// Page fault error code bits
 pub mod error_code {
@@ -83,25 +82,17 @@ fn handle_not_present(fault_addr: u64, is_write: bool, is_user: bool) -> Result<
 
 /// Map a virtual page to a physical frame
 fn map_page(virt_addr: u64, phys_addr: u64, writable: bool, user: bool) -> Result<(), PageFaultError> {
-    // Get current page table from CR3
-    let cr3 = crate::arch::x86::paging::read_cr3();
-    let pml4_addr = cr3 & !0xFFF;
-
-    // Extract page table indices
-    let pml4_idx = ((virt_addr >> 39) & 0x1FF) as usize;
-    let pdpt_idx = ((virt_addr >> 30) & 0x1FF) as usize;
-    let pd_idx = ((virt_addr >> 21) & 0x1FF) as usize;
-    let pt_idx = ((virt_addr >> 12) & 0x1FF) as usize;
-
     // This is a simplified version - a real implementation would:
-    // 1. Walk the page tables, creating intermediate tables as needed
-    // 2. Set up proper permissions
-    // 3. Handle TLB flushing
-    // For now, we'll just return success
-    // TODO: Implement full page table walking and mapping
-
-    // Flush TLB for this page
-    crate::arch::x86::paging::flush_tlb(virt_addr);
+    // 1. Get current page table from CR3
+    // 2. Walk the page tables, creating intermediate tables as needed
+    // 3. Set up proper permissions (writable, user)
+    // 4. Map virtual to physical address
+    // 5. Handle TLB flushing
+    
+    // For now, just return success as a stub
+    // TODO: Implement full page table walking and mapping using paging module
+    
+    let _ = (virt_addr, phys_addr, writable, user); // Suppress warnings
 
     Ok(())
 }
