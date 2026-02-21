@@ -306,12 +306,12 @@ mod tests {
         manager.add_device(0, 100);
         
         assert_eq!(manager.total_swap(), 100 * 4096);
-        assert_eq!(manager.free_swap(), 100 * 4096);
+        assert_eq!(manager.free_swap_space(), 100 * 4096);
         
         let entry = manager.allocate_swap().unwrap();
-        assert_eq!(manager.free_swap(), 99 * 4096);
+        assert_eq!(manager.free_swap_space(), 99 * 4096);
         
         manager.free_swap(entry);
-        assert_eq!(manager.free_swap(), 100 * 4096);
+        assert_eq!(manager.free_swap_space(), 100 * 4096);
     }
 }
