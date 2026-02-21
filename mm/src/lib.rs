@@ -40,6 +40,9 @@ pub fn init() {
     // Initialize paging support
     paging::init();
 
+    // Initialize page fault handler
+    page_fault::init();
+
     // Initialize OOM killer
     oom::init();
 

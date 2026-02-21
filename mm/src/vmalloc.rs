@@ -122,7 +122,10 @@ impl VMAllocator {
 
     /// Map virtual memory region to physical frames
     fn map_region(&mut self, virt_start: usize, size: usize) -> Result<(), ()> {
+        use crate::paging::{PageMapper, VirtAddr, PhysAddr};
+        
         let num_pages = size / PAGE_SIZE;
+        let mut mapper = unsafe { PageMapper::new() };
 
         for i in 0..num_pages {
             let virt_addr = virt_start + i * PAGE_SIZE;
@@ -130,15 +133,19 @@ impl VMAllocator {
             // Allocate a physical frame
             let frame = frame::allocate_frame().ok_or(())?;
 
-            // Note: Cannot directly zero physical memory without mapping it first
-            // TODO: Integrate with page table mapping to zero frames
-            // For now, frames are allocated but not zeroed (security risk)
+            // Zero the physical frame BEFORE mapping to avoid race conditions
+            // TODO: This assumes identity mapping for physical frames
+            // In production, should use a temporary mapping or DMA region
+            unsafe {
+                let phys_ptr = frame.start_address() as *mut u8;
+                core::ptr::write_bytes(phys_ptr, 0, PAGE_SIZE);
+            }
 
-            // Map the page (stub - needs proper page table integration)
-            let _phys_addr = frame.start_address();
-            // map_page(virt_addr, phys_addr, true, false)?;
-            
-            let _ = virt_addr; // Suppress warning
+            // Map the page with kernel-only permissions (writable, not user)
+            let virt = VirtAddr::new(virt_addr as u64);
+            let phys = PhysAddr::new(frame.start_address());
+            mapper.map_page(virt, phys, true, false)
+                .map_err(|_| ())?;
         }
 
         Ok(())
@@ -146,18 +153,19 @@ impl VMAllocator {
 
     /// Unmap virtual memory region
     fn unmap_region(&mut self, virt_start: usize, size: usize) -> Result<(), ()> {
+        use crate::paging::{PageMapper, VirtAddr};
+        
         let num_pages = size / PAGE_SIZE;
+        let mut mapper = unsafe { PageMapper::new() };
 
         for i in 0..num_pages {
             let virt_addr = virt_start + i * PAGE_SIZE;
+            let virt = VirtAddr::new(virt_addr as u64);
 
             // Unmap the page and free the physical frame
-            // TODO: Use proper page table unmapping
-            // let phys_addr = unmap_page(virt_addr)?;
-            // let frame = Frame::containing_address(phys_addr);
-            // frame::deallocate_frame(frame);
-
-            let _ = virt_addr; // Suppress warning
+            if let Ok(frame) = mapper.unmap_page(virt) {
+                frame::deallocate_frame(frame);
+            }
         }
 
         Ok(())

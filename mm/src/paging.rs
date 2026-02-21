@@ -191,6 +191,109 @@ impl HugePageSize {
     }
 }
 
+/// Page table entry with flags
+#[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct PageTableEntry(u64);
+
+impl PageTableEntry {
+    const PRESENT: u64 = 1 << 0;
+    const WRITABLE: u64 = 1 << 1;
+    const USER: u64 = 1 << 2;
+    const WRITE_THROUGH: u64 = 1 << 3;
+    const NO_CACHE: u64 = 1 << 4;
+    const ACCESSED: u64 = 1 << 5;
+    const DIRTY: u64 = 1 << 6;
+    const HUGE: u64 = 1 << 7;
+    const GLOBAL: u64 = 1 << 8;
+    const NO_EXECUTE: u64 = 1 << 63;
+    const ADDR_MASK: u64 = 0x000F_FFFF_FFFF_F000;
+
+    pub const fn new() -> Self {
+        PageTableEntry(0)
+    }
+
+    pub fn is_present(&self) -> bool {
+        (self.0 & Self::PRESENT) != 0
+    }
+
+    pub fn is_writable(&self) -> bool {
+        (self.0 & Self::WRITABLE) != 0
+    }
+
+    pub fn is_user(&self) -> bool {
+        (self.0 & Self::USER) != 0
+    }
+
+    pub fn is_huge(&self) -> bool {
+        (self.0 & Self::HUGE) != 0
+    }
+
+    pub fn addr(&self) -> PhysAddr {
+        PhysAddr::new(self.0 & Self::ADDR_MASK)
+    }
+
+    pub fn set(&mut self, addr: PhysAddr, writable: bool, user: bool) {
+        let mut flags = Self::PRESENT;
+        if writable {
+            flags |= Self::WRITABLE;
+        }
+        if user {
+            flags |= Self::USER;
+        }
+        self.0 = (addr.as_u64() & Self::ADDR_MASK) | flags;
+    }
+
+    pub fn set_huge(&mut self, addr: PhysAddr, writable: bool, user: bool) {
+        let mut flags = Self::PRESENT | Self::HUGE;
+        if writable {
+            flags |= Self::WRITABLE;
+        }
+        if user {
+            flags |= Self::USER;
+        }
+        self.0 = (addr.as_u64() & Self::ADDR_MASK) | flags;
+    }
+
+    pub fn clear(&mut self) {
+        self.0 = 0;
+    }
+}
+
+impl Default for PageTableEntry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Page table with 512 entries
+#[repr(align(4096))]
+pub struct PageTable {
+    entries: [PageTableEntry; 512],
+}
+
+impl PageTable {
+    pub const fn new() -> Self {
+        PageTable {
+            entries: [PageTableEntry::new(); 512],
+        }
+    }
+
+    pub fn get_entry(&self, index: usize) -> Option<&PageTableEntry> {
+        self.entries.get(index)
+    }
+
+    pub fn get_entry_mut(&mut self, index: usize) -> Option<&mut PageTableEntry> {
+        self.entries.get_mut(index)
+    }
+}
+
+impl Default for PageTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Page mapper for managing virtual to physical mappings
 pub struct PageMapper {
     // Page table root (CR3 value)
@@ -220,7 +323,33 @@ impl PageMapper {
         }
     }
 
+    /// Get page table indices from a virtual address
+    fn page_indices(virt: VirtAddr) -> [usize; 4] {
+        let addr = virt.as_u64();
+        [
+            ((addr >> 39) & 0x1FF) as usize, // PML4
+            ((addr >> 30) & 0x1FF) as usize, // PDP
+            ((addr >> 21) & 0x1FF) as usize, // PD
+            ((addr >> 12) & 0x1FF) as usize, // PT
+        ]
+    }
+    
+    /// Safely access a page table by physical address
+    ///
+    /// # Safety
+    ///
+    /// This assumes identity mapping for page tables. In a production kernel,
+    /// this should use a dedicated page table mapping region or recursive mapping.
+    /// The caller must ensure the physical address points to a valid page table.
+    unsafe fn access_page_table(phys: PhysAddr) -> &'static mut PageTable {
+        // TODO: In a complete implementation, map page tables to a known virtual
+        // address range instead of assuming identity mapping
+        &mut *(phys.as_u64() as *mut PageTable)
+    }
+
     /// Map a virtual page to a physical frame
+    ///
+    /// This walks the page table hierarchy and creates page tables as needed.
     pub fn map_page(
         &mut self,
         virt: VirtAddr,
@@ -228,26 +357,159 @@ impl PageMapper {
         writable: bool,
         user: bool,
     ) -> Result<(), &'static str> {
-        // TODO: Walk page tables and create mapping
-        // For now, this is a stub
-        let _ = (virt, phys, writable, user);
-        Ok(())
+        #[cfg(target_arch = "x86_64")]
+        {
+            let indices = Self::page_indices(virt);
+            
+            // Walk page tables, creating them if needed
+            let mut current_table_phys = self.root;
+            
+            // For each level (except the last), ensure the next level exists
+            for level in 0..3 {
+                // SAFETY: We assume identity mapping for page tables. This is a limitation
+                // of the current implementation and should be improved with proper mapping.
+                let table = unsafe { Self::access_page_table(current_table_phys) };
+                
+                let entry = table.get_entry_mut(indices[level])
+                    .ok_or("Invalid page table index")?;
+                
+                if !entry.is_present() {
+                    // Allocate a new page table
+                    let new_frame = allocate_frame()
+                        .ok_or("Out of memory")?;
+                    
+                    // Zero the new page table
+                    let new_table_ptr = new_frame.start_address() as *mut PageTable;
+                    unsafe {
+                        core::ptr::write_bytes(new_table_ptr, 0, 1);
+                    }
+                    
+                    // Set the entry to point to the new table
+                    entry.set(PhysAddr::new(new_frame.start_address()), true, user);
+                }
+                
+                current_table_phys = entry.addr();
+            }
+            
+            // Now map the final page
+            let table_ptr = current_table_phys.as_u64() as *mut PageTable;
+            let table = unsafe { &mut *table_ptr };
+            
+            let entry = table.get_entry_mut(indices[3])
+                .ok_or("Invalid page table index")?;
+            
+            if entry.is_present() {
+                return Err("Page already mapped");
+            }
+            
+            entry.set(phys, writable, user);
+            
+            // Flush TLB for this address
+            tlb::shootdown_all(virt.as_u64());
+            
+            Ok(())
+        }
+        
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            let _ = (virt, phys, writable, user);
+            Err("Paging not supported on this architecture")
+        }
     }
 
     /// Unmap a virtual page
     pub fn unmap_page(&mut self, virt: VirtAddr) -> Result<Frame, &'static str> {
-        // TODO: Walk page tables and remove mapping
-        // For now, this is a stub
-        let _ = virt;
-        Err("Not implemented")
+        #[cfg(target_arch = "x86_64")]
+        {
+            let indices = Self::page_indices(virt);
+            
+            // Walk to the final page table
+            let mut current_table_phys = self.root;
+            
+            for level in 0..3 {
+                let table_ptr = current_table_phys.as_u64() as *const PageTable;
+                let table = unsafe { &*table_ptr };
+                
+                let entry = table.get_entry(indices[level])
+                    .ok_or("Invalid page table index")?;
+                
+                if !entry.is_present() {
+                    return Err("Page not mapped");
+                }
+                
+                current_table_phys = entry.addr();
+            }
+            
+            // Unmap the page
+            let table_ptr = current_table_phys.as_u64() as *mut PageTable;
+            let table = unsafe { &mut *table_ptr };
+            
+            let entry = table.get_entry_mut(indices[3])
+                .ok_or("Invalid page table index")?;
+            
+            if !entry.is_present() {
+                return Err("Page not mapped");
+            }
+            
+            let phys_addr = entry.addr();
+            let frame = Frame::containing_address(phys_addr.as_u64());
+            
+            entry.clear();
+            
+            // Flush TLB
+            tlb::shootdown_all(virt.as_u64());
+            
+            Ok(frame)
+        }
+        
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            let _ = virt;
+            Err("Paging not supported on this architecture")
+        }
     }
 
     /// Translate a virtual address to physical
     pub fn translate(&self, virt: VirtAddr) -> Option<PhysAddr> {
-        // TODO: Walk page tables to find physical address
-        // For now, return None
-        let _ = virt;
-        None
+        #[cfg(target_arch = "x86_64")]
+        {
+            let indices = Self::page_indices(virt);
+            let mut current_table_phys = self.root;
+            
+            // Walk the page tables
+            for level in 0..4 {
+                let table_ptr = current_table_phys.as_u64() as *const PageTable;
+                let table = unsafe { &*table_ptr };
+                
+                let entry = table.get_entry(indices[level])?;
+                
+                if !entry.is_present() {
+                    return None;
+                }
+                
+                // Check for huge pages at level 2 (1GB) or level 3 (2MB)
+                if level >= 2 && entry.is_huge() {
+                    let page_offset = virt.as_u64() & ((1 << (12 + 9 * (3 - level))) - 1);
+                    return Some(PhysAddr::new(entry.addr().as_u64() + page_offset));
+                }
+                
+                if level == 3 {
+                    // Final level - add page offset
+                    let page_offset = virt.page_offset();
+                    return Some(PhysAddr::new(entry.addr().as_u64() + page_offset));
+                }
+                
+                current_table_phys = entry.addr();
+            }
+            
+            None
+        }
+        
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            let _ = virt;
+            None
+        }
     }
 
     /// Map a huge page
@@ -264,9 +526,64 @@ impl PageMapper {
             return Err("Addresses not aligned for huge page");
         }
 
-        // TODO: Set huge page bit in page table entry
-        let _ = (virt, phys, size, writable, user);
-        Ok(())
+        #[cfg(target_arch = "x86_64")]
+        {
+            let indices = Self::page_indices(virt);
+            let mut current_table_phys = self.root;
+            
+            // Determine how many levels to walk (2 for 1GB, 3 for 2MB)
+            let target_level = match size {
+                HugePageSize::Size1GB => 2,
+                HugePageSize::Size2MB => 3,
+            };
+            
+            // Walk to the target level
+            for level in 0..target_level {
+                let table_ptr = current_table_phys.as_u64() as *mut PageTable;
+                let table = unsafe { &mut *table_ptr };
+                
+                let entry = table.get_entry_mut(indices[level])
+                    .ok_or("Invalid page table index")?;
+                
+                if !entry.is_present() {
+                    let new_frame = allocate_frame()
+                        .ok_or("Out of memory")?;
+                    
+                    let new_table_ptr = new_frame.start_address() as *mut PageTable;
+                    unsafe {
+                        core::ptr::write_bytes(new_table_ptr, 0, 1);
+                    }
+                    
+                    entry.set(PhysAddr::new(new_frame.start_address()), true, user);
+                }
+                
+                current_table_phys = entry.addr();
+            }
+            
+            // Set huge page entry
+            let table_ptr = current_table_phys.as_u64() as *mut PageTable;
+            let table = unsafe { &mut *table_ptr };
+            
+            let entry = table.get_entry_mut(indices[target_level])
+                .ok_or("Invalid page table index")?;
+            
+            if entry.is_present() {
+                return Err("Page already mapped");
+            }
+            
+            entry.set_huge(phys, writable, user);
+            
+            // Flush TLB
+            tlb::shootdown_all(virt.as_u64());
+            
+            Ok(())
+        }
+        
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            let _ = (virt, phys, size, writable, user);
+            Err("Paging not supported on this architecture")
+        }
     }
 }
 

@@ -8,6 +8,7 @@ license = "MIT"
 [dependencies]
 spin = "0.9"
 bitflags = "2.4"
+rinux-mm = { path = "../mm" }
 
 [lib]
 crate-type = ["rlib"]
