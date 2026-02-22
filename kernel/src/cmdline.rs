@@ -28,16 +28,17 @@ static RAW_CMDLINE: Mutex<Option<String>> = Mutex::new(None);
 /// init("root=/dev/sda1 ro quiet init=/sbin/init");
 /// ```
 pub fn init(cmdline: &str) {
-    // Store raw command line
+    // Store raw command line (clamped to MAX_CMDLINE_LEN)
     let trimmed = cmdline.trim();
-    if trimmed.len() > MAX_CMDLINE_LEN {
-        *RAW_CMDLINE.lock() = Some(trimmed[..MAX_CMDLINE_LEN].to_string());
+    let truncated = if trimmed.len() > MAX_CMDLINE_LEN {
+        &trimmed[..MAX_CMDLINE_LEN]
     } else {
-        *RAW_CMDLINE.lock() = Some(trimmed.to_string());
-    }
+        trimmed
+    };
+    *RAW_CMDLINE.lock() = Some(truncated.to_string());
 
-    // Parse parameters
-    let params = parse_cmdline(trimmed);
+    // Parse parameters from the same truncated string
+    let params = parse_cmdline(truncated);
     *CMDLINE_PARAMS.lock() = Some(params);
 }
 
@@ -175,7 +176,9 @@ fn parse_size(s: &str) -> Option<u64> {
         (s, 1)
     };
 
-    num_str.parse::<u64>().ok().map(|n| n * multiplier)
+    // Parse and check for overflow
+    let value = num_str.parse::<u64>().ok()?;
+    value.checked_mul(multiplier)
 }
 
 #[cfg(test)]

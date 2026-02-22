@@ -129,7 +129,7 @@ pub fn init() {
         panic!("Not in 64-bit long mode!");
     }
     
-    // Check for NX bit support (EFER.NXE bit)
+    // Check whether NX is enabled (EFER.NXE bit)
     let nx_enabled = (efer & (1 << 11)) != 0;
     
     // Get current page table

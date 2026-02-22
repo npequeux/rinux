@@ -102,10 +102,19 @@ impl Writer {
                 let row = self.row_position;
                 let col = self.column_position;
 
-                self.buffer.chars[row][col] = ScreenChar {
+                let char_to_write = ScreenChar {
                     ascii_character: byte,
                     color_code: self.color_code,
                 };
+                
+                // Use volatile write for MMIO
+                unsafe {
+                    core::ptr::write_volatile(
+                        &mut self.buffer.chars[row][col] as *mut ScreenChar,
+                        char_to_write
+                    );
+                }
+                
                 self.column_position += 1;
             }
         }
@@ -137,9 +146,15 @@ impl Writer {
 
     /// Scroll the screen up by one line
     fn scroll_up(&mut self) {
+        // Use volatile reads and writes for MMIO
         for row in 1..VGA_HEIGHT {
             for col in 0..VGA_WIDTH {
-                self.buffer.chars[row - 1][col] = self.buffer.chars[row][col];
+                unsafe {
+                    let src = &self.buffer.chars[row][col] as *const ScreenChar;
+                    let dst = &mut self.buffer.chars[row - 1][col] as *mut ScreenChar;
+                    let char = core::ptr::read_volatile(src);
+                    core::ptr::write_volatile(dst, char);
+                }
             }
         }
         
@@ -155,7 +170,12 @@ impl Writer {
             color_code: self.color_code,
         };
         for col in 0..VGA_WIDTH {
-            self.buffer.chars[row][col] = blank;
+            unsafe {
+                core::ptr::write_volatile(
+                    &mut self.buffer.chars[row][col] as *mut ScreenChar,
+                    blank
+                );
+            }
         }
     }
 
@@ -175,7 +195,12 @@ impl Writer {
 
     /// Update hardware cursor position
     pub fn update_cursor(&self) {
-        let pos = self.row_position * VGA_WIDTH + self.column_position;
+        // Clamp row and column to ensure the hardware cursor position
+        // always remains within the visible VGA text buffer
+        let row = self.row_position.min(VGA_HEIGHT - 1);
+        let col = self.column_position.min(VGA_WIDTH - 1);
+        
+        let pos = row * VGA_WIDTH + col;
         
         unsafe {
             // Write cursor location low byte

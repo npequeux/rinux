@@ -95,10 +95,10 @@ unsafe {
 - Typical reduction: 256 buses → ~10-20 buses scanned
 
 **PCI Access Functions:**
-- `read_pci_config_u32()` - Read 32-bit config register
+- `read_pci_config_u32()` - Read 32-bit config register (dx-based port I/O)
 - `read_pci_config_u16()` - Read 16-bit config register  
 - `read_pci_config_u8()` - Read 8-bit config register
-- `write_pci_config_u32()` - Write 32-bit config register
+- `write_pci_config_u32()` - Write 32-bit config register (dx-based port I/O)
 
 **Lines of Code:** 210 new lines (scanning and initialization)
 
@@ -130,6 +130,7 @@ unsafe {
 - Bounds checking on all array accesses
 - Invalid GUID detection (all zeros)
 - Empty partition entry skipping
+- Uses existing `parse_gpt()` and `parse_mbr()` helpers
 
 **Lines of Code:** 111 new lines
 
@@ -145,6 +146,7 @@ unsafe {
   - 16 foreground colors
   - 8 background colors
   - Color code packing (4-bit foreground + 4-bit background)
+  - Volatile MMIO accesses (prevents compiler optimization issues)
 - Advanced character handling:
   - Newline (`\n`) - Move to next line
   - Carriage return (`\r`) - Return to start of line
@@ -158,6 +160,7 @@ unsafe {
   - Cursor position tracking
   - VGA cursor register programming (ports 0x3D4/0x3D5)
   - Automatic cursor updates after write
+  - Bounds clamping to prevent invalid positions
 - Screen management:
   - Clear screen operation
   - Clear individual rows
@@ -191,6 +194,8 @@ vga::clear_screen();
 **Features Implemented:**
 - Direct serial port (COM1) access at 0x3F8
 - No kernel infrastructure dependencies
+- Timeout protection (100,000 retry limit) for absent UART
+- CPU spin loop hints for efficient busy-waiting
 - Minimal initialization:
   - Baud rate: 38400 bps (divisor 3)
   - 8 data bits, no parity, 1 stop bit
@@ -276,7 +281,8 @@ early_printk!("Initializing subsystems...\n");
 - ✅ All unsafe code documented with safety comments
 - ✅ Bounds checking on all array accesses
 - ✅ Null pointer validation
-- ✅ Integer overflow prevention (saturating operations)
+- ✅ Integer overflow prevention (checked_mul for size parsing)
+- ✅ Timeout protection on busy-wait loops
 
 ### Code Review
 - ✅ All 4 review comments addressed:

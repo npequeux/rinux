@@ -494,18 +494,20 @@ fn read_pci_config_u32(bus: u8, device: u8, function: u8, offset: u8) -> u32 {
         | ((offset as u32) & 0xFC);
     
     unsafe {
-        // Write address to CONFIG_ADDRESS port
+        // Write address to CONFIG_ADDRESS port (0xCF8)
         core::arch::asm!(
-            "out 0xCF8, eax",
+            "out dx, eax",
+            in("dx") 0xCF8u16,
             in("eax") address,
             options(nomem, nostack)
         );
         
-        // Read data from CONFIG_DATA port
+        // Read data from CONFIG_DATA port (0xCFC)
         let mut data: u32;
         core::arch::asm!(
-            "in eax, 0xCFC",
+            "in eax, dx",
             out("eax") data,
+            in("dx") 0xCFCu16,
             options(nomem, nostack)
         );
         data
@@ -521,16 +523,18 @@ fn write_pci_config_u32(bus: u8, device: u8, function: u8, offset: u8, value: u3
         | ((offset as u32) & 0xFC);
     
     unsafe {
-        // Write address
+        // Write address to CONFIG_ADDRESS port (0xCF8)
         core::arch::asm!(
-            "out 0xCF8, eax",
+            "out dx, eax",
+            in("dx") 0xCF8u16,
             in("eax") address,
             options(nomem, nostack)
         );
         
-        // Write data
+        // Write data to CONFIG_DATA port (0xCFC)
         core::arch::asm!(
-            "out 0xCFC, eax",
+            "out dx, eax",
+            in("dx") 0xCFCu16,
             in("eax") value,
             options(nomem, nostack)
         );

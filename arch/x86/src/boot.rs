@@ -119,6 +119,9 @@ struct BootStack(#[allow(dead_code)] [u8; STACK_SIZE]);
 #[used]
 static mut BOOT_STACK: BootStack = BootStack([0; STACK_SIZE]);
 
+/// Stored Multiboot info address (set during early_init)
+static MULTIBOOT_INFO_ADDR: core::sync::atomic::AtomicU32 = core::sync::atomic::AtomicU32::new(0);
+
 /// Early boot initialization
 ///
 /// # Arguments
@@ -140,6 +143,9 @@ pub unsafe fn early_init(multiboot_magic: u32, multiboot_info_addr: u32) -> Resu
     if multiboot_info_addr == 0 {
         return Err("NULL Multiboot info pointer");
     }
+
+    // Store the Multiboot info address for later retrieval
+    MULTIBOOT_INFO_ADDR.store(multiboot_info_addr, core::sync::atomic::Ordering::Release);
 
     // Parse multiboot info
     let mbi = &*(multiboot_info_addr as *const MultibootInfo);
@@ -165,10 +171,14 @@ pub unsafe fn early_init(multiboot_magic: u32, multiboot_info_addr: u32) -> Resu
 
 /// Get Multiboot info structure
 ///
+/// Returns the Multiboot info structure that was saved during `early_init()`.
+///
 /// # Safety
 ///
-/// This assumes the multiboot info was saved during early_init
-pub unsafe fn get_multiboot_info(addr: u32) -> Option<&'static MultibootInfo> {
+/// This function is only safe to call after `early_init()` has been called successfully.
+/// The returned reference is valid as long as the bootloader-provided memory remains mapped.
+pub unsafe fn get_multiboot_info() -> Option<&'static MultibootInfo> {
+    let addr = MULTIBOOT_INFO_ADDR.load(core::sync::atomic::Ordering::Acquire);
     if addr == 0 {
         None
     } else {

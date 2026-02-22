@@ -15,11 +15,21 @@ use core::fmt;
 /// early_printk("Boot stage 1\n");
 /// ```
 pub fn early_printk(s: &str) {
+    const MAX_RETRIES: u32 = 100000;
+    
     // Write directly to COM1 port at 0x3F8
     for byte in s.bytes() {
         unsafe {
-            // Wait for transmit buffer empty
-            while (read_port(0x3FD) & 0x20) == 0 {}
+            // Wait for transmit buffer empty with timeout
+            let mut retries = 0;
+            while (read_port(0x3FD) & 0x20) == 0 {
+                core::hint::spin_loop();
+                retries += 1;
+                if retries >= MAX_RETRIES {
+                    // UART not responding, likely not present - bail out
+                    return;
+                }
+            }
             
             // Write byte
             write_port(0x3F8, byte);
