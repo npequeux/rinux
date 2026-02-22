@@ -11,6 +11,7 @@ pub mod audio;
 pub mod early_printk;
 pub mod graphics;
 pub mod keyboard;
+pub mod net;
 pub mod pci;
 pub mod power;
 pub mod rtc;
@@ -47,6 +48,9 @@ pub fn init() {
 
     // Initialize USB subsystem (depends on PCI)
     usb::init();
+
+    // Initialize network drivers (depends on PCI)
+    net::init();
 
     // Initialize audio
     audio::init();
