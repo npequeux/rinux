@@ -16,7 +16,7 @@ use core::fmt;
 /// ```
 pub fn early_printk(s: &str) {
     const MAX_RETRIES: u32 = 100000;
-    
+
     // Write directly to COM1 port at 0x3F8
     for byte in s.bytes() {
         unsafe {
@@ -30,7 +30,7 @@ pub fn early_printk(s: &str) {
                     return;
                 }
             }
-            
+
             // Write byte
             write_port(0x3F8, byte);
         }
@@ -88,16 +88,16 @@ macro_rules! early_printkln {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    
+
     struct SerialWriter;
-    
+
     impl fmt::Write for SerialWriter {
         fn write_str(&mut self, s: &str) -> fmt::Result {
             early_printk(s);
             Ok(())
         }
     }
-    
+
     SerialWriter.write_fmt(args).unwrap();
 }
 
@@ -122,4 +122,3 @@ pub fn init() {
         write_port(0x3F8 + 4, 0x0B);
     }
 }
-

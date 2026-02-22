@@ -2,8 +2,8 @@
 //!
 //! Process/thread task structure.
 
-use crate::types::{Gid, Pid, Uid};
 use crate::fs::fd::FileDescriptorTable;
+use crate::types::{Gid, Pid, Uid};
 use alloc::sync::Arc;
 use spin::Mutex;
 

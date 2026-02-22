@@ -87,6 +87,8 @@ pub struct SocketAddrUnix {
 pub enum SocketState {
     /// Socket is closed
     Closed,
+    /// Socket is bound to an address
+    Bound,
     /// Socket is listening for connections
     Listening,
     /// Socket is connecting
@@ -442,7 +444,7 @@ impl Socket for UdpSocketWrapper {
         match addr {
             SocketAddr::V4(addr_v4) => {
                 self.inner.bind(addr_v4)?;
-                self.state = SocketState::Connected;
+                self.state = SocketState::Bound;
                 Ok(())
             }
             _ => Err(SocketError::NotSupported),

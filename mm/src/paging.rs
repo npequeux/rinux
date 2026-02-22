@@ -25,7 +25,7 @@ pub mod tlb {
     ///
     /// **IMPORTANT**: Currently only flushes the local CPU's TLB.
     /// In a multi-core system, other CPUs may still have stale TLB entries.
-    /// 
+    ///
     /// For proper SMP TLB coherency, the following must be implemented:
     /// 1. Inter-Processor Interrupts (IPI) mechanism via APIC
     /// 2. TLB shootdown IPI vector and handler on all CPUs
