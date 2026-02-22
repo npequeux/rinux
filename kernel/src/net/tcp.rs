@@ -644,6 +644,8 @@ impl TcpSocket {
         header.calculate_checksum(src_ip, dst_ip, &[]);
 
         // TODO: Send packet via network stack
+        // Integration required with ipv4::send_packet() or equivalent
+        // Example: ipv4::send_packet(dst_ip, IpProtocol::Tcp, &packet_data)?;
         // For now, just update state
         tcb.set_state(TcpState::SynSent);
 
@@ -670,6 +672,8 @@ impl TcpSocket {
         header.calculate_checksum(src_ip, dst_ip, &[]);
 
         // TODO: Send packet via network stack
+        // Integration required: Build complete IP+TCP packet and transmit
+        // This requires ipv4 layer to provide send_packet() API
 
         Ok(())
     }
@@ -694,6 +698,7 @@ impl TcpSocket {
         header.calculate_checksum(src_ip, dst_ip, &[]);
 
         // TODO: Send packet via network stack
+        // Integration required: Serialize and transmit TCP ACK packet
 
         Ok(())
     }
@@ -719,6 +724,7 @@ impl TcpSocket {
         header.calculate_checksum(src_ip, dst_ip, &[]);
 
         // TODO: Send packet via network stack
+        // Integration required: Transmit FIN packet for connection termination
 
         Ok(())
     }
@@ -755,6 +761,8 @@ impl TcpSocket {
         tcb.send.nxt = tcb.send.nxt.wrapping_add(send_len as u32);
 
         // TODO: Send packet via network stack
+        // Integration required: Serialize TCP header + payload and transmit
+        // Must integrate with IPv4 layer for packet encapsulation and routing
 
         Ok(send_len)
     }
@@ -1305,10 +1313,21 @@ pub fn is_port_bound(port: u16) -> bool {
 
 /// Generate initial sequence number
 ///
-/// In a real implementation, this should use a cryptographically secure
-/// random number generator and incorporate time-based components.
+/// # Security Note
+///
+/// This implementation uses a simple counter-based approach which is NOT
+/// cryptographically secure and vulnerable to sequence prediction attacks.
+/// RFC 6528 requires cryptographically random ISNs to prevent TCP hijacking.
+///
+/// TODO: Implement secure ISN generation using:
+/// - Hardware random number generator (RDRAND instruction)
+/// - ChaCha20 or similar CSPRNG
+/// - ISN = hash(src_ip, src_port, dst_ip, dst_port, timestamp, secret)
+///
+/// For production use, this MUST be replaced with a secure implementation.
 fn generate_isn() -> u32 {
     static ISN_COUNTER: AtomicU32 = AtomicU32::new(1000);
+    // Increment by a large value to make prediction harder (but still not secure)
     ISN_COUNTER.fetch_add(64000, Ordering::Relaxed)
 }
 

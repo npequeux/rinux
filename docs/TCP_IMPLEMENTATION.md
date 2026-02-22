@@ -512,12 +512,47 @@ This implementation follows:
 - State machine enforcement
 - Port conflict prevention
 
+### Known Security Limitations
+
+⚠️ **IMPORTANT**: The current implementation has security limitations that MUST be addressed before production use:
+
+#### 1. Insecure ISN Generation
+**Issue**: The Initial Sequence Number (ISN) is generated using a predictable counter, making connections vulnerable to TCP hijacking and sequence prediction attacks.
+
+**Risk**: An attacker can predict sequence numbers and inject forged packets or hijack connections.
+
+**RFC Violation**: RFC 6528 requires cryptographically random ISNs.
+
+**Required Fix**:
+```rust
+// Current (INSECURE):
+ISN = counter.fetch_add(64000)
+
+// Required (SECURE):
+ISN = MD5(local_ip, local_port, remote_ip, remote_port, timestamp, secret_key)
+// OR use RDRAND/hardware RNG for cryptographic randomness
+```
+
+**Implementation Plan**:
+1. Add hardware RNG support (x86 RDRAND instruction)
+2. Implement ChaCha20 or similar CSPRNG
+3. Hash connection 4-tuple with timestamp and secret
+4. Follow RFC 6528 recommendations
+
+#### 2. Missing Packet Transmission
+**Issue**: TCP functions return success without actually transmitting packets (TODOs in send_syn, send_ack, send_fin, send_data).
+
+**Risk**: Silent connection failures, state inconsistencies.
+
+**Required**: Complete IPv4 integration for packet transmission.
+
 ### Future Security Features
-- SYN flood protection
+- SYN flood protection (SYN cookies)
 - Connection rate limiting
-- Random ISN generation (cryptographic)
 - TCP MD5 signatures (RFC 2385)
 - TCP Authentication Option (RFC 5925)
+- Replay attack prevention
+- Secure sequence number validation
 
 ## Debugging
 
