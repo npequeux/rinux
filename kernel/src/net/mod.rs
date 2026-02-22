@@ -9,10 +9,10 @@ pub mod ethernet;
 pub mod ipv4;
 pub mod netdev;
 pub mod socket;
+pub mod tcp;
 pub mod udp;
 
 // TODO: Add these modules as they're implemented
-// pub mod tcp;
 // pub mod icmp;
 
 /// Network subsystem initialized flag
@@ -30,6 +30,7 @@ pub fn init() {
     arp::init();
     ipv4::init();
     udp::init();
+    tcp::init();
     socket::init();
 
     NET_INITIALIZED.store(true, Ordering::Release);
