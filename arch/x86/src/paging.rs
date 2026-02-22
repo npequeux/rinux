@@ -122,19 +122,19 @@ pub fn init() {
     if (cr0 & (1 << 31)) == 0 {
         panic!("Paging is not enabled!");
     }
-    
+
     // Verify we're in 64-bit long mode (EFER.LMA bit)
     let efer = read_efer();
     if (efer & (1 << 10)) == 0 {
         panic!("Not in 64-bit long mode!");
     }
-    
+
     // Check whether NX is enabled (EFER.NXE bit)
     let nx_enabled = (efer & (1 << 11)) != 0;
-    
+
     // Get current page table
     let cr3 = read_cr3();
-    
+
     // In early boot logging would use early_printk:
     // early_printk!("Paging initialized: CR3={:#x}, NX={}\n", cr3, nx_enabled);
     let _ = (cr3, nx_enabled); // Suppress unused warnings

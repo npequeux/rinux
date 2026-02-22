@@ -97,6 +97,74 @@ struct CommandFis {
     _reserved: [u8; 4],
 }
 
+/// Command Header (one per command slot, 32 bytes)
+#[repr(C, packed)]
+struct CommandHeader {
+    flags: u16,              // Command flags (DW0)
+    prdtl: u16,              // Physical Region Descriptor Table Length
+    prdbc: u32,              // Physical Region Descriptor Byte Count
+    ctba: u32,               // Command Table Base Address (lower 32-bit)
+    ctba_upper: u32,         // Command Table Base Address (upper 32-bit)
+    _reserved: [u32; 4],
+}
+
+/// Physical Region Descriptor Table Entry (PRDT entry, 16 bytes)
+#[repr(C, packed)]
+struct PrdtEntry {
+    dba: u32,        // Data Base Address (lower 32-bit)
+    dba_upper: u32,  // Data Base Address (upper 32-bit)
+    _reserved: u32,
+    dbc: u32,        // Data Byte Count (bit 0-21), Interrupt on completion (bit 31)
+}
+
+/// Command Table (128 bytes aligned, variable size with PRDT)
+#[repr(C, packed)]
+struct CommandTable {
+    cfis: [u8; 64],           // Command FIS
+    acmd: [u8; 16],           // ATAPI Command
+    _reserved: [u8; 48],
+    // PRDT entries follow (variable size)
+}
+
+/// Command Header flags
+const CMD_HEADER_FLAG_FIS_LENGTH: u16 = 5; // FIS length in DWORDs (5 * 4 = 20 bytes for H2D FIS)
+const CMD_HEADER_FLAG_WRITE: u16 = 1 << 6; // Write (H2D)
+const CMD_HEADER_FLAG_PREFETCHABLE: u16 = 1 << 7;
+const CMD_HEADER_FLAG_CLEAR_BUSY: u16 = 1 << 10;
+
+/// PRDT entry flags
+const PRDT_INTERRUPT_ON_COMPLETION: u32 = 1 << 31;
+
+/// Allocate aligned memory for DMA
+fn allocate_aligned(size: usize, alignment: usize) -> Option<*mut u8> {
+    use alloc::alloc::{alloc, Layout};
+    
+    let layout = Layout::from_size_align(size, alignment).ok()?;
+    unsafe {
+        let ptr = alloc(layout);
+        if ptr.is_null() {
+            None
+        } else {
+            // Zero the memory for DMA buffers
+            core::ptr::write_bytes(ptr, 0, size);
+            Some(ptr)
+        }
+    }
+}
+
+/// Get physical address from virtual address
+/// 
+/// # Safety
+/// 
+/// This function currently assumes identity mapping in kernel space.
+/// In a production kernel with virtual memory, this would need to walk
+/// the page tables to translate virtual to physical addresses.
+fn virt_to_phys(virt: *const u8) -> u64 {
+    // TODO: Implement proper page table walking for virtual-to-physical translation
+    // For now, we assume identity mapping for kernel DMA buffers
+    virt as u64
+}
+
 /// Build a READ DMA EXT command FIS
 fn build_read_fis(lba: u64, count: u16) -> CommandFis {
     CommandFis {
@@ -151,6 +219,12 @@ fn build_write_fis(lba: u64, count: u16) -> CommandFis {
     }
 }
 
+/// Port command and status register bits
+const PORT_CMD_START: u32 = 1 << 0;        // Start (ST)
+const PORT_CMD_FIS_RX_ENABLE: u32 = 1 << 4; // FIS Receive Enable (FRE)
+const PORT_CMD_FIS_RX_RUNNING: u32 = 1 << 14; // FIS Receive Running (FR)
+const PORT_CMD_CR: u32 = 1 << 15;          // Command List Running (CR)
+
 /// AHCI Device
 pub struct AhciDevice {
     name: String,
@@ -185,33 +259,33 @@ impl AhciDevice {
 
     /// Issue a read command to the device
     fn read_dma(&self, lba: u64, count: u16, buffer: &mut [u8]) -> Result<(), BlockDeviceError> {
-        // This implements DMA read operation:
-        // 1. Build a command FIS (Frame Information Structure)
-        // 2. Set up the command table with PRDT (Physical Region Descriptor Table)
-        // 3. Issue the command to the port
-        // 4. Wait for completion via interrupt or polling
-        // 5. Copy data from DMA buffer to user buffer
+        // Get port registers
+        let port = self.get_port_registers();
+        
+        // Stop command engine to set up new command
+        self.stop_cmd(port)?;
         
         // Build READ DMA EXT command (0x25)
         let command_fis = build_read_fis(lba, count);
         
-        // Get port registers
-        let port = self.get_port_registers();
-        
         // Set up command header and table
-        if let Err(_) = self.setup_command(port, &command_fis, buffer) {
-            return Err(BlockDeviceError::IoError);
-        }
+        let dma_buffer = self.setup_command_read(port, &command_fis, buffer.len())?;
+        
+        // Start command engine
+        self.start_cmd(port)?;
         
         // Issue command
         unsafe {
-            // Set command issue bit
+            // Set command issue bit for slot 0
             core::ptr::write_volatile(&mut (*port).command_issue as *mut u32, 1);
         }
         
-        // Wait for completion (simplified polling for now)
-        if let Err(_) = self.wait_for_completion(port) {
-            return Err(BlockDeviceError::Timeout);
+        // Wait for completion - only copy data on success
+        self.wait_for_completion(port)?;
+        
+        // Copy data from DMA buffer to user buffer
+        unsafe {
+            core::ptr::copy_nonoverlapping(dma_buffer, buffer.as_mut_ptr(), buffer.len());
         }
         
         Ok(())
@@ -219,22 +293,27 @@ impl AhciDevice {
 
     /// Issue a write command to the device
     fn write_dma(&self, lba: u64, count: u16, buffer: &[u8]) -> Result<(), BlockDeviceError> {
-        // Similar to read_dma but for writing
-        let command_fis = build_write_fis(lba, count);
-        
         let port = self.get_port_registers();
         
-        if let Err(_) = self.setup_command(port, &command_fis, buffer) {
-            return Err(BlockDeviceError::IoError);
-        }
+        // Stop command engine to set up new command
+        self.stop_cmd(port)?;
         
+        // Build WRITE DMA EXT command
+        let command_fis = build_write_fis(lba, count);
+        
+        // Set up command
+        self.setup_command_write(port, &command_fis, buffer)?;
+        
+        // Start command engine
+        self.start_cmd(port)?;
+        
+        // Issue command
         unsafe {
             core::ptr::write_volatile(&mut (*port).command_issue as *mut u32, 1);
         }
         
-        if let Err(_) = self.wait_for_completion(port) {
-            return Err(BlockDeviceError::Timeout);
-        }
+        // Wait for completion
+        self.wait_for_completion(port)?;
         
         Ok(())
     }
@@ -249,26 +328,226 @@ impl AhciDevice {
         }
     }
     
-    /// Set up command for DMA transfer
-    fn setup_command(
+    /// Start command engine on port
+    fn start_cmd(&self, port: *mut PortRegisters) -> Result<(), BlockDeviceError> {
+        unsafe {
+            // Wait until CR (bit 15) is cleared
+            let mut timeout = 1000;
+            while (core::ptr::read_volatile(&(*port).command_and_status as *const u32) & PORT_CMD_CR) != 0 {
+                timeout -= 1;
+                if timeout == 0 {
+                    return Err(BlockDeviceError::Timeout);
+                }
+                // Yield CPU to reduce busy-waiting overhead
+                core::hint::spin_loop();
+            }
+            
+            // Set FRE (bit 4) and ST (bit 0)
+            let cmd = core::ptr::read_volatile(&(*port).command_and_status as *const u32);
+            core::ptr::write_volatile(
+                &mut (*port).command_and_status as *mut u32,
+                cmd | PORT_CMD_FIS_RX_ENABLE | PORT_CMD_START,
+            );
+            
+            Ok(())
+        }
+    }
+    
+    /// Stop command engine on port
+    fn stop_cmd(&self, port: *mut PortRegisters) -> Result<(), BlockDeviceError> {
+        unsafe {
+            // Clear ST (bit 0)
+            let mut cmd = core::ptr::read_volatile(&(*port).command_and_status as *const u32);
+            cmd &= !PORT_CMD_START;
+            core::ptr::write_volatile(&mut (*port).command_and_status as *mut u32, cmd);
+            
+            // Wait until FR (bit 14), CR (bit 15) are cleared
+            let mut timeout = 1000;
+            loop {
+                let status = core::ptr::read_volatile(&(*port).command_and_status as *const u32);
+                if (status & PORT_CMD_FIS_RX_RUNNING) == 0 && (status & PORT_CMD_CR) == 0 {
+                    break;
+                }
+                timeout -= 1;
+                if timeout == 0 {
+                    return Err(BlockDeviceError::Timeout);
+                }
+                // Yield CPU to reduce busy-waiting overhead
+                core::hint::spin_loop();
+            }
+            
+            // Clear FRE (bit 4)
+            cmd = core::ptr::read_volatile(&(*port).command_and_status as *const u32);
+            cmd &= !PORT_CMD_FIS_RX_ENABLE;
+            core::ptr::write_volatile(&mut (*port).command_and_status as *mut u32, cmd);
+            
+            Ok(())
+        }
+    }
+    
+    /// Set up command for DMA read transfer
+    fn setup_command_read(
+        &self,
+        port: *mut PortRegisters,
+        fis: &CommandFis,
+        buffer_len: usize,
+    ) -> Result<*mut u8, BlockDeviceError> {
+        // Validate buffer length
+        if buffer_len == 0 {
+            return Err(BlockDeviceError::InvalidOffset);
+        }
+        
+        unsafe {
+            // Allocate command list (1K aligned, minimum 1024 bytes for 32 command slots)
+            let cmd_list = allocate_aligned(1024, 1024).ok_or(BlockDeviceError::IoError)?;
+            let cmd_header = cmd_list as *mut CommandHeader;
+            
+            // Allocate command table (128-byte aligned)
+            let cmd_table_size = core::mem::size_of::<CommandTable>() + core::mem::size_of::<PrdtEntry>();
+            let cmd_table_ptr = allocate_aligned(cmd_table_size, 128).ok_or(BlockDeviceError::IoError)?;
+            let cmd_table = cmd_table_ptr as *mut CommandTable;
+            
+            // Allocate DMA buffer for data transfer (aligned to sector size)
+            let dma_buffer = allocate_aligned(buffer_len, 512).ok_or(BlockDeviceError::IoError)?;
+            
+            // Fill in the Command FIS in the command table
+            core::ptr::copy_nonoverlapping(
+                fis as *const CommandFis as *const u8,
+                (*cmd_table).cfis.as_mut_ptr(),
+                core::mem::size_of::<CommandFis>(),
+            );
+            
+            // Set up PRDT entry (located after CommandTable)
+            let prdt_entry = (cmd_table_ptr as usize + core::mem::size_of::<CommandTable>()) as *mut PrdtEntry;
+            let phys_addr = virt_to_phys(dma_buffer);
+            
+            core::ptr::write_volatile(&mut (*prdt_entry).dba as *mut u32, (phys_addr & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*prdt_entry).dba_upper as *mut u32, ((phys_addr >> 32) & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*prdt_entry)._reserved as *mut u32, 0);
+            
+            // Data byte count - 1 (0-based), with interrupt on completion
+            let dbc = ((buffer_len - 1) as u32) | PRDT_INTERRUPT_ON_COMPLETION;
+            core::ptr::write_volatile(&mut (*prdt_entry).dbc as *mut u32, dbc);
+            
+            // Fill in command header (read, so no write flag)
+            let flags = CMD_HEADER_FLAG_FIS_LENGTH | CMD_HEADER_FLAG_PREFETCHABLE | CMD_HEADER_FLAG_CLEAR_BUSY;
+            
+            core::ptr::write_volatile(&mut (*cmd_header).flags as *mut u16, flags);
+            core::ptr::write_volatile(&mut (*cmd_header).prdtl as *mut u16, 1);
+            core::ptr::write_volatile(&mut (*cmd_header).prdbc as *mut u32, 0);
+            
+            // Set command table base address
+            let cmd_table_phys = virt_to_phys(cmd_table_ptr);
+            core::ptr::write_volatile(&mut (*cmd_header).ctba as *mut u32, (cmd_table_phys & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*cmd_header).ctba_upper as *mut u32, ((cmd_table_phys >> 32) & 0xFFFFFFFF) as u32);
+            
+            // Clear reserved fields
+            for i in 0..4 {
+                core::ptr::write_volatile(&mut (*cmd_header)._reserved[i] as *mut u32, 0);
+            }
+            
+            // Set command list base address in port registers
+            let cmd_list_phys = virt_to_phys(cmd_list);
+            core::ptr::write_volatile(&mut (*port).command_list_base as *mut u32, (cmd_list_phys & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*port).command_list_base_upper as *mut u32, ((cmd_list_phys >> 32) & 0xFFFFFFFF) as u32);
+            
+            // Allocate and set up received FIS buffer (256 bytes, 256-byte aligned)
+            let fis_buffer = allocate_aligned(256, 256).ok_or(BlockDeviceError::IoError)?;
+            let fis_buffer_phys = virt_to_phys(fis_buffer);
+            core::ptr::write_volatile(&mut (*port).fis_base as *mut u32, (fis_buffer_phys & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*port).fis_base_upper as *mut u32, ((fis_buffer_phys >> 32) & 0xFFFFFFFF) as u32);
+            
+            // TODO: Track allocated memory (cmd_list, cmd_table_ptr, dma_buffer, fis_buffer)
+            // for cleanup after command completion to prevent memory leaks
+            
+            Ok(dma_buffer)
+        }
+    }
+    
+    /// Set up command for DMA write transfer
+    fn setup_command_write(
         &self,
         port: *mut PortRegisters,
         fis: &CommandFis,
         buffer: &[u8],
-    ) -> Result<(), ()> {
-        // In a real implementation:
-        // 1. Allocate command list and tables
-        // 2. Fill in FIS in command table
-        // 3. Set up PRDT entries pointing to buffer
-        // 4. Set command header
+    ) -> Result<(), BlockDeviceError> {
+        // Validate buffer length
+        if buffer.is_empty() {
+            return Err(BlockDeviceError::InvalidOffset);
+        }
         
-        // For now, this is simplified
-        let _ = (port, fis, buffer);
-        Ok(())
+        unsafe {
+            // Allocate command list (1K aligned, minimum 1024 bytes for 32 command slots)
+            let cmd_list = allocate_aligned(1024, 1024).ok_or(BlockDeviceError::IoError)?;
+            let cmd_header = cmd_list as *mut CommandHeader;
+            
+            // Allocate command table (128-byte aligned)
+            let cmd_table_size = core::mem::size_of::<CommandTable>() + core::mem::size_of::<PrdtEntry>();
+            let cmd_table_ptr = allocate_aligned(cmd_table_size, 128).ok_or(BlockDeviceError::IoError)?;
+            let cmd_table = cmd_table_ptr as *mut CommandTable;
+            
+            // Allocate DMA buffer for data transfer (aligned to sector size)
+            let dma_buffer = allocate_aligned(buffer.len(), 512).ok_or(BlockDeviceError::IoError)?;
+            
+            // Copy data to DMA buffer for write
+            core::ptr::copy_nonoverlapping(buffer.as_ptr(), dma_buffer, buffer.len());
+            
+            // Fill in the Command FIS in the command table
+            core::ptr::copy_nonoverlapping(
+                fis as *const CommandFis as *const u8,
+                (*cmd_table).cfis.as_mut_ptr(),
+                core::mem::size_of::<CommandFis>(),
+            );
+            
+            // Set up PRDT entry (located after CommandTable)
+            let prdt_entry = (cmd_table_ptr as usize + core::mem::size_of::<CommandTable>()) as *mut PrdtEntry;
+            let phys_addr = virt_to_phys(dma_buffer);
+            
+            core::ptr::write_volatile(&mut (*prdt_entry).dba as *mut u32, (phys_addr & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*prdt_entry).dba_upper as *mut u32, ((phys_addr >> 32) & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*prdt_entry)._reserved as *mut u32, 0);
+            
+            // Data byte count - 1 (0-based), with interrupt on completion
+            let dbc = ((buffer.len() - 1) as u32) | PRDT_INTERRUPT_ON_COMPLETION;
+            core::ptr::write_volatile(&mut (*prdt_entry).dbc as *mut u32, dbc);
+            
+            // Fill in command header (write, so set write flag)
+            let flags = CMD_HEADER_FLAG_FIS_LENGTH | CMD_HEADER_FLAG_WRITE | CMD_HEADER_FLAG_PREFETCHABLE | CMD_HEADER_FLAG_CLEAR_BUSY;
+            
+            core::ptr::write_volatile(&mut (*cmd_header).flags as *mut u16, flags);
+            core::ptr::write_volatile(&mut (*cmd_header).prdtl as *mut u16, 1);
+            core::ptr::write_volatile(&mut (*cmd_header).prdbc as *mut u32, 0);
+            
+            // Set command table base address
+            let cmd_table_phys = virt_to_phys(cmd_table_ptr);
+            core::ptr::write_volatile(&mut (*cmd_header).ctba as *mut u32, (cmd_table_phys & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*cmd_header).ctba_upper as *mut u32, ((cmd_table_phys >> 32) & 0xFFFFFFFF) as u32);
+            
+            // Clear reserved fields
+            for i in 0..4 {
+                core::ptr::write_volatile(&mut (*cmd_header)._reserved[i] as *mut u32, 0);
+            }
+            
+            // Set command list base address in port registers
+            let cmd_list_phys = virt_to_phys(cmd_list);
+            core::ptr::write_volatile(&mut (*port).command_list_base as *mut u32, (cmd_list_phys & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*port).command_list_base_upper as *mut u32, ((cmd_list_phys >> 32) & 0xFFFFFFFF) as u32);
+            
+            // Allocate and set up received FIS buffer (256 bytes, 256-byte aligned)
+            let fis_buffer = allocate_aligned(256, 256).ok_or(BlockDeviceError::IoError)?;
+            let fis_buffer_phys = virt_to_phys(fis_buffer);
+            core::ptr::write_volatile(&mut (*port).fis_base as *mut u32, (fis_buffer_phys & 0xFFFFFFFF) as u32);
+            core::ptr::write_volatile(&mut (*port).fis_base_upper as *mut u32, ((fis_buffer_phys >> 32) & 0xFFFFFFFF) as u32);
+            
+            // TODO: Track allocated memory (cmd_list, cmd_table_ptr, dma_buffer, fis_buffer)
+            // for cleanup after command completion to prevent memory leaks
+            
+            Ok(())
+        }
     }
     
     /// Wait for command completion (interrupt-driven)
-    fn wait_for_completion(&self, port: *mut PortRegisters) -> Result<(), ()> {
+    fn wait_for_completion(&self, port: *mut PortRegisters) -> Result<(), BlockDeviceError> {
         // Create I/O completion tracker
         let completion = add_pending_io(self.port, 0);
         
@@ -278,7 +557,7 @@ impl AhciDevice {
         // Wait for completion with timeout (5 seconds = 5000ms)
         match wait_for_completion(&completion, 5000) {
             Ok(_) => Ok(()),
-            Err(_) => Err(()),
+            Err(_) => Err(BlockDeviceError::Timeout),
         }
     }
 }

@@ -173,3 +173,76 @@ pub fn write_fd(fd: FileDescriptor, buf: *const u8, count: usize) -> Result<usiz
         Err(())
     }
 }
+
+/// Seek in a file descriptor
+pub fn seek_fd(fd: FileDescriptor, offset: i64, whence: i32) -> Result<i64, ()> {
+    let mut table = GLOBAL_FD_TABLE.lock();
+    if let Some(ref mut t) = *table {
+        if let Some(file) = t.get_file_mut(fd) {
+            // whence: 0 = SEEK_SET, 1 = SEEK_CUR, 2 = SEEK_END
+            let new_pos = match whence {
+                0 => offset.max(0) as u64,
+                1 => (file.position as i64 + offset).max(0) as u64,
+                2 => (file.size as i64 + offset).max(0) as u64,
+                _ => return Err(()),
+            };
+            file.position = new_pos;
+            Ok(new_pos as i64)
+        } else {
+            Err(())
+        }
+    } else {
+        Err(())
+    }
+}
+
+/// Duplicate a file descriptor
+pub fn dup_fd(fd: FileDescriptor) -> Result<FileDescriptor, ()> {
+    let table = GLOBAL_FD_TABLE.lock();
+    if let Some(ref t) = *table {
+        if let Some(file) = t.get_file(fd) {
+            let new_file = file.clone();
+            drop(table);
+            allocate_fd(new_file)
+        } else {
+            Err(())
+        }
+    } else {
+        Err(())
+    }
+}
+
+/// Duplicate a file descriptor to a specific fd
+pub fn dup2_fd(oldfd: FileDescriptor, newfd: FileDescriptor) -> Result<FileDescriptor, ()> {
+    if oldfd == newfd {
+        return Ok(newfd);
+    }
+    
+    let table = GLOBAL_FD_TABLE.lock();
+    if let Some(ref t) = *table {
+        if let Some(file) = t.get_file(oldfd) {
+            let new_file = file.clone();
+            drop(table);
+            
+            // Close newfd if it's open
+            let _ = free_fd(newfd);
+            
+            // Allocate at specific fd
+            let mut table = GLOBAL_FD_TABLE.lock();
+            if let Some(ref mut t) = *table {
+                // Ensure table is large enough
+                while t.entries.len() <= newfd as usize {
+                    t.entries.push(FdEntry::Empty);
+                }
+                t.entries[newfd as usize] = FdEntry::File(new_file);
+                Ok(newfd)
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
+        }
+    } else {
+        Err(())
+    }
+}

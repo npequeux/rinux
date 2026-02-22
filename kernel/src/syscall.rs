@@ -48,6 +48,26 @@ pub enum SyscallNumber {
     SchedYield = 24,
     /// Get time
     Time = 201,
+    /// Get time of day
+    Gettimeofday = 96,
+    /// Seek in file
+    Lseek = 8,
+    /// Duplicate file descriptor
+    Dup = 32,
+    /// Duplicate file descriptor to specific fd
+    Dup2 = 33,
+    /// Get current working directory
+    Getcwd = 79,
+    /// Change directory
+    Chdir = 80,
+    /// Create directory
+    Mkdir = 83,
+    /// Remove directory
+    Rmdir = 84,
+    /// Unlink/delete file
+    Unlink = 87,
+    /// Rename file
+    Rename = 82,
     /// Unknown/invalid syscall
     Unknown = 0xFFFFFFFF,
 }
@@ -76,6 +96,16 @@ impl From<u64> for SyscallNumber {
             10 => SyscallNumber::Mprotect,
             24 => SyscallNumber::SchedYield,
             201 => SyscallNumber::Time,
+            96 => SyscallNumber::Gettimeofday,
+            8 => SyscallNumber::Lseek,
+            32 => SyscallNumber::Dup,
+            33 => SyscallNumber::Dup2,
+            79 => SyscallNumber::Getcwd,
+            80 => SyscallNumber::Chdir,
+            83 => SyscallNumber::Mkdir,
+            84 => SyscallNumber::Rmdir,
+            87 => SyscallNumber::Unlink,
+            82 => SyscallNumber::Rename,
             _ => SyscallNumber::Unknown,
         }
     }
@@ -114,6 +144,8 @@ pub mod errno {
     pub const EINVAL: isize = -22;
     /// Too many open files
     pub const EMFILE: isize = -24;
+    /// Out of range
+    pub const ERANGE: isize = -34;
     /// Function not implemented
     pub const ENOSYS: isize = -38;
 }
@@ -246,24 +278,185 @@ pub fn handle_syscall(
             }
         }
         SyscallNumber::Getppid => {
-            // TODO: Get parent PID from task structure
+            // TODO: Get parent PID from current task
             Ok(0)
         }
         SyscallNumber::Getuid => {
-            // TODO: Get UID from task structure
+            // TODO: Get UID from current task
             Ok(0)
         }
         SyscallNumber::Getgid => {
-            // TODO: Get GID from task structure
+            // TODO: Get GID from current task
             Ok(0)
         }
         SyscallNumber::Setuid => {
-            // TODO: Set UID in task structure
-            Err(errno::ENOSYS)
+            // TODO: Set UID with capability check
+            Err(errno::EPERM)
         }
         SyscallNumber::Setgid => {
-            // TODO: Set GID in task structure
+            // TODO: Set GID with capability check
+            Err(errno::EPERM)
+        }
+        SyscallNumber::Lseek => {
+            let fd = arg1 as i32;
+            let offset = arg2 as i64;
+            let whence = arg3 as i32;
+            
+            match crate::fs::fd::seek_fd(fd, offset, whence) {
+                Ok(new_pos) => Ok(new_pos as usize),
+                Err(_) => Err(errno::EBADF),
+            }
+        }
+        SyscallNumber::Dup => {
+            let fd = arg1 as i32;
+            match crate::fs::fd::dup_fd(fd) {
+                Ok(new_fd) => Ok(new_fd as usize),
+                Err(_) => Err(errno::EBADF),
+            }
+        }
+        SyscallNumber::Dup2 => {
+            let oldfd = arg1 as i32;
+            let newfd = arg2 as i32;
+            match crate::fs::fd::dup2_fd(oldfd, newfd) {
+                Ok(fd) => Ok(fd as usize),
+                Err(_) => Err(errno::EBADF),
+            }
+        }
+        SyscallNumber::Getcwd => {
+            let buf = arg1 as *mut u8;
+            let size = arg2;
+            
+            if buf.is_null() || size == 0 {
+                return Err(errno::EINVAL);
+            }
+            
+            // Get current working directory (default to "/" for now)
+            let cwd = "/";
+            let cwd_bytes = cwd.as_bytes();
+            
+            if cwd_bytes.len() + 1 > size {
+                return Err(errno::ERANGE);
+            }
+            
+            unsafe {
+                core::ptr::copy_nonoverlapping(cwd_bytes.as_ptr(), buf, cwd_bytes.len());
+                *buf.add(cwd_bytes.len()) = 0; // Null terminator
+            }
+            
+            Ok(arg1) // Return buffer pointer
+        }
+        SyscallNumber::Chdir => {
+            let path_ptr = arg1 as *const u8;
+            
+            if path_ptr.is_null() {
+                return Err(errno::EFAULT);
+            }
+            
+            // Read path from user space
+            let path = unsafe {
+                let mut len = 0;
+                while len < 4096 && *path_ptr.add(len) != 0 {
+                    len += 1;
+                }
+                if len == 0 {
+                    return Err(errno::EINVAL);
+                }
+                let slice = core::slice::from_raw_parts(path_ptr, len);
+                core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
+            };
+            
+            // TODO: Actually change directory and verify it exists
+            let _ = path;
+            Ok(0)
+        }
+        SyscallNumber::Mkdir => {
+            let path_ptr = arg1 as *const u8;
+            let mode = arg2 as u32;
+            
+            if path_ptr.is_null() {
+                return Err(errno::EFAULT);
+            }
+            
+            // Read path from user space
+            let path = unsafe {
+                let mut len = 0;
+                while len < 4096 && *path_ptr.add(len) != 0 {
+                    len += 1;
+                }
+                let slice = core::slice::from_raw_parts(path_ptr, len);
+                core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
+            };
+            
+            // TODO: Create directory via VFS
+            let _ = (path, mode);
             Err(errno::ENOSYS)
+        }
+        SyscallNumber::Rmdir => {
+            let path_ptr = arg1 as *const u8;
+            
+            if path_ptr.is_null() {
+                return Err(errno::EFAULT);
+            }
+            
+            // Read path
+            let path = unsafe {
+                let mut len = 0;
+                while len < 4096 && *path_ptr.add(len) != 0 {
+                    len += 1;
+                }
+                let slice = core::slice::from_raw_parts(path_ptr, len);
+                core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
+            };
+            
+            // TODO: Remove directory via VFS
+            let _ = path;
+            Err(errno::ENOSYS)
+        }
+        SyscallNumber::Unlink => {
+            let path_ptr = arg1 as *const u8;
+            
+            if path_ptr.is_null() {
+                return Err(errno::EFAULT);
+            }
+            
+            let path = unsafe {
+                let mut len = 0;
+                while len < 4096 && *path_ptr.add(len) != 0 {
+                    len += 1;
+                }
+                let slice = core::slice::from_raw_parts(path_ptr, len);
+                core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
+            };
+            
+            // TODO: Unlink file via VFS
+            let _ = path;
+            Err(errno::ENOSYS)
+        }
+        SyscallNumber::Rename => {
+            let oldpath_ptr = arg1 as *const u8;
+            let newpath_ptr = arg2 as *const u8;
+            
+            if oldpath_ptr.is_null() || newpath_ptr.is_null() {
+                return Err(errno::EFAULT);
+            }
+            
+            // TODO: Rename file via VFS
+            let _ = (oldpath_ptr, newpath_ptr);
+            Err(errno::ENOSYS)
+        }
+        SyscallNumber::Gettimeofday => {
+            let tv_ptr = arg1 as *mut u64;
+            
+            if !tv_ptr.is_null() {
+                // Return current uptime in microseconds
+                // TODO: Implement real wall-clock time
+                unsafe {
+                    // For now, return uptime (simplified)
+                    *tv_ptr = 0; // seconds
+                    *tv_ptr.add(1) = 0; // microseconds
+                }
+            }
+            Ok(0)
         }
         SyscallNumber::Mmap => {
             // arg1: addr, arg2: length, arg3: prot, arg4: flags, arg5: fd, arg6: offset

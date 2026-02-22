@@ -133,7 +133,10 @@ static MULTIBOOT_INFO_ADDR: core::sync::atomic::AtomicU32 = core::sync::atomic::
 ///
 /// This function must be called exactly once during boot, before paging is fully set up.
 /// The multiboot_info_addr must point to a valid Multiboot info structure.
-pub unsafe fn early_init(multiboot_magic: u32, multiboot_info_addr: u32) -> Result<(), &'static str> {
+pub unsafe fn early_init(
+    multiboot_magic: u32,
+    multiboot_info_addr: u32,
+) -> Result<(), &'static str> {
     // Verify multiboot magic
     if multiboot_magic != MULTIBOOT_BOOTLOADER_MAGIC {
         return Err("Invalid Multiboot magic value");

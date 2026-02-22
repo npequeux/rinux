@@ -106,15 +106,15 @@ impl Writer {
                     ascii_character: byte,
                     color_code: self.color_code,
                 };
-                
+
                 // Use volatile write for MMIO
                 unsafe {
                     core::ptr::write_volatile(
                         &mut self.buffer.chars[row][col] as *mut ScreenChar,
-                        char_to_write
+                        char_to_write,
                     );
                 }
-                
+
                 self.column_position += 1;
             }
         }
@@ -135,7 +135,7 @@ impl Writer {
     /// Move to a new line
     fn new_line(&mut self) {
         self.column_position = 0;
-        
+
         if self.row_position < VGA_HEIGHT - 1 {
             self.row_position += 1;
         } else {
@@ -157,7 +157,7 @@ impl Writer {
                 }
             }
         }
-        
+
         // Clear the last line
         self.clear_row(VGA_HEIGHT - 1);
         self.row_position = VGA_HEIGHT - 1;
@@ -173,7 +173,7 @@ impl Writer {
             unsafe {
                 core::ptr::write_volatile(
                     &mut self.buffer.chars[row][col] as *mut ScreenChar,
-                    blank
+                    blank,
                 );
             }
         }
@@ -199,9 +199,9 @@ impl Writer {
         // always remains within the visible VGA text buffer
         let row = self.row_position.min(VGA_HEIGHT - 1);
         let col = self.column_position.min(VGA_WIDTH - 1);
-        
+
         let pos = row * VGA_WIDTH + col;
-        
+
         unsafe {
             // Write cursor location low byte
             core::arch::asm!(
@@ -216,7 +216,7 @@ impl Writer {
                 in("al") (pos & 0xFF) as u8,
                 options(nomem, nostack)
             );
-            
+
             // Write cursor location high byte
             core::arch::asm!(
                 "out dx, al",
@@ -249,7 +249,7 @@ pub fn init() {
     let writer = Writer::new();
     let mut lock = WRITER.lock();
     *lock = Some(writer);
-    
+
     if let Some(ref mut w) = *lock {
         w.clear_screen();
         w.update_cursor();

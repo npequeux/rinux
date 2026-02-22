@@ -9,6 +9,7 @@ license = "MIT"
 spin = "0.9"
 rinux-kernel = { path = "../kernel" }
 rinux-arch-x86 = { path = "../arch/x86" }
+rinux-mm = { path = "../mm" }
 
 [lib]
 crate-type = ["rlib"]

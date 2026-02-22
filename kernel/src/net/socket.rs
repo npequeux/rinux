@@ -6,6 +6,9 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::Mutex;
 
+use super::tcp::TcpSocket as NetTcpSocket;
+use super::udp::UdpSocket as NetUdpSocket;
+
 /// Socket domain (address family)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SocketDomain {
@@ -85,6 +88,8 @@ pub struct SocketAddrUnix {
 pub enum SocketState {
     /// Socket is closed
     Closed,
+    /// Socket is bound to an address
+    Bound,
     /// Socket is listening for connections
     Listening,
     /// Socket is connecting
@@ -324,18 +329,16 @@ pub fn socket(
         (SocketDomain::Inet, SocketType::Stream, SocketProtocol::Tcp)
         | (SocketDomain::Inet, SocketType::Stream, SocketProtocol::Default) => {
             // Create TCP socket
-            // let tcp_socket = crate::net::tcp::TcpSocket::new()?;
-            // let fd = SOCKET_TABLE.lock().add(Arc::new(Mutex::new(tcp_socket)));
-            // Ok(fd)
-            Err(SocketError::NotSupported)
+            let tcp_socket = TcpSocketWrapper::new()?;
+            let fd = SOCKET_TABLE.lock().add(Arc::new(Mutex::new(tcp_socket)));
+            Ok(fd)
         }
         (SocketDomain::Inet, SocketType::Dgram, SocketProtocol::Udp)
         | (SocketDomain::Inet, SocketType::Dgram, SocketProtocol::Default) => {
             // Create UDP socket
-            // let udp_socket = crate::net::udp::UdpSocket::new()?;
-            // let fd = SOCKET_TABLE.lock().add(Arc::new(Mutex::new(udp_socket)));
-            // Ok(fd)
-            Err(SocketError::NotSupported)
+            let udp_socket = UdpSocketWrapper::new()?;
+            let fd = SOCKET_TABLE.lock().add(Arc::new(Mutex::new(udp_socket)));
+            Ok(fd)
         }
         _ => Err(SocketError::NotSupported),
     }
@@ -419,6 +422,187 @@ pub fn close_socket(fd: i32) -> Result<(), SocketError> {
         .ok_or(SocketError::InvalidArg)?;
     let result = socket.lock().close();
     result
+}
+
+/// UDP socket wrapper implementing Socket trait
+struct UdpSocketWrapper {
+    inner: NetUdpSocket,
+    state: SocketState,
+}
+
+impl UdpSocketWrapper {
+    fn new() -> Result<Self, SocketError> {
+        Ok(Self {
+            inner: NetUdpSocket::new()?,
+            state: SocketState::Closed,
+        })
+    }
+}
+
+impl Socket for UdpSocketWrapper {
+    fn bind(&mut self, addr: SocketAddr) -> Result<(), SocketError> {
+        match addr {
+            SocketAddr::V4(addr_v4) => {
+                self.inner.bind(addr_v4)?;
+                self.state = SocketState::Bound;
+                Ok(())
+            }
+            _ => Err(SocketError::NotSupported),
+        }
+    }
+
+    fn listen(&mut self, _backlog: u32) -> Result<(), SocketError> {
+        Err(SocketError::NotSupported)
+    }
+
+    fn accept(&mut self) -> Result<Arc<Mutex<dyn Socket>>, SocketError> {
+        Err(SocketError::NotSupported)
+    }
+
+    fn connect(&mut self, addr: SocketAddr) -> Result<(), SocketError> {
+        match addr {
+            SocketAddr::V4(addr_v4) => {
+                self.inner.connect(addr_v4)?;
+                self.state = SocketState::Connected;
+                Ok(())
+            }
+            _ => Err(SocketError::NotSupported),
+        }
+    }
+
+    fn send(&mut self, data: &[u8], _flags: u32) -> Result<usize, SocketError> {
+        self.inner.send(data)
+    }
+
+    fn recv(&mut self, buffer: &mut [u8], _flags: u32) -> Result<usize, SocketError> {
+        self.inner.recv(buffer)
+    }
+
+    fn sendto(&mut self, data: &[u8], addr: SocketAddr, _flags: u32) -> Result<usize, SocketError> {
+        match addr {
+            SocketAddr::V4(addr_v4) => self.inner.send_to(data, addr_v4),
+            _ => Err(SocketError::NotSupported),
+        }
+    }
+
+    fn recvfrom(
+        &mut self,
+        buffer: &mut [u8],
+        _flags: u32,
+    ) -> Result<(usize, SocketAddr), SocketError> {
+        let (len, addr) = self.inner.recv_from(buffer)?;
+        Ok((len, SocketAddr::V4(addr)))
+    }
+
+    fn shutdown(&mut self, _how: ShutdownHow) -> Result<(), SocketError> {
+        self.state = SocketState::Closing;
+        Ok(())
+    }
+
+    fn close(&mut self) -> Result<(), SocketError> {
+        self.inner.close()?;
+        self.state = SocketState::Closed;
+        Ok(())
+    }
+
+    fn state(&self) -> SocketState {
+        self.state
+    }
+
+    fn setsockopt(&mut self, _option: SocketOption) -> Result<(), SocketError> {
+        Err(SocketError::NotSupported)
+    }
+
+    fn getsockopt(&self, _option: SocketOptionType) -> Result<SocketOption, SocketError> {
+        Err(SocketError::NotSupported)
+    }
+
+    fn local_addr(&self) -> Option<SocketAddr> {
+        self.inner.local_addr().map(SocketAddr::V4)
+    }
+
+    fn peer_addr(&self) -> Option<SocketAddr> {
+        self.inner.remote_addr().map(SocketAddr::V4)
+    }
+}
+
+/// TCP socket wrapper implementing Socket trait
+struct TcpSocketWrapper {
+    inner: NetTcpSocket,
+}
+
+impl TcpSocketWrapper {
+    fn new() -> Result<Self, SocketError> {
+        Ok(Self {
+            inner: NetTcpSocket::new()?,
+        })
+    }
+}
+
+impl Socket for TcpSocketWrapper {
+    fn bind(&mut self, addr: SocketAddr) -> Result<(), SocketError> {
+        self.inner.bind(addr)
+    }
+
+    fn listen(&mut self, backlog: u32) -> Result<(), SocketError> {
+        self.inner.listen(backlog)
+    }
+
+    fn accept(&mut self) -> Result<Arc<Mutex<dyn Socket>>, SocketError> {
+        self.inner.accept()
+    }
+
+    fn connect(&mut self, addr: SocketAddr) -> Result<(), SocketError> {
+        self.inner.connect(addr)
+    }
+
+    fn send(&mut self, data: &[u8], flags: u32) -> Result<usize, SocketError> {
+        self.inner.send(data, flags)
+    }
+
+    fn recv(&mut self, buffer: &mut [u8], flags: u32) -> Result<usize, SocketError> {
+        self.inner.recv(buffer, flags)
+    }
+
+    fn sendto(&mut self, data: &[u8], addr: SocketAddr, flags: u32) -> Result<usize, SocketError> {
+        self.inner.sendto(data, addr, flags)
+    }
+
+    fn recvfrom(
+        &mut self,
+        buffer: &mut [u8],
+        flags: u32,
+    ) -> Result<(usize, SocketAddr), SocketError> {
+        self.inner.recvfrom(buffer, flags)
+    }
+
+    fn shutdown(&mut self, how: ShutdownHow) -> Result<(), SocketError> {
+        self.inner.shutdown(how)
+    }
+
+    fn close(&mut self) -> Result<(), SocketError> {
+        self.inner.close()
+    }
+
+    fn state(&self) -> SocketState {
+        self.inner.state()
+    }
+
+    fn setsockopt(&mut self, option: SocketOption) -> Result<(), SocketError> {
+        self.inner.setsockopt(option)
+    }
+
+    fn getsockopt(&self, option: SocketOptionType) -> Result<SocketOption, SocketError> {
+        self.inner.getsockopt(option)
+    }
+
+    fn local_addr(&self) -> Option<SocketAddr> {
+        self.inner.local_addr()
+    }
+
+    fn peer_addr(&self) -> Option<SocketAddr> {
+        self.inner.peer_addr()
+    }
 }
 
 /// Initialize socket subsystem
