@@ -128,7 +128,7 @@ impl EthernetHeader {
         Self {
             dst,
             src,
-            ethertype: ethertype.as_u16().to_be(),
+            ethertype: ethertype.as_u16(),
         }
     }
 
@@ -154,7 +154,7 @@ impl EthernetHeader {
 
     /// Get EtherType
     pub fn get_ethertype(&self) -> EtherType {
-        EtherType::from_u16(u16::from_be(self.ethertype))
+        EtherType::from_u16(self.ethertype)
     }
 
     /// Write header to buffer
@@ -165,7 +165,7 @@ impl EthernetHeader {
 
         buffer[0..6].copy_from_slice(&self.dst.0);
         buffer[6..12].copy_from_slice(&self.src.0);
-        buffer[12..14].copy_from_slice(&self.ethertype.to_ne_bytes());
+        buffer[12..14].copy_from_slice(&self.ethertype.to_be_bytes());
 
         Ok(())
     }
