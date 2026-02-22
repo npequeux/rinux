@@ -112,7 +112,7 @@ pub fn init() {
         // Enable DLAB (set baud rate divisor)
         write_port(0x3F8 + 3, 0x80);
         // Set divisor to 3 (38400 baud)
-        write_port(0x3F8 + 0, 0x03);
+        write_port(0x3F8, 0x03);
         write_port(0x3F8 + 1, 0x00);
         // 8 bits, no parity, one stop bit
         write_port(0x3F8 + 3, 0x03);

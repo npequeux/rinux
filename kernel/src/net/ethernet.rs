@@ -148,7 +148,7 @@ impl EthernetHeader {
         Ok(Self {
             dst: MacAddress(dst),
             src: MacAddress(src),
-            ethertype: ethertype.to_be(),
+            ethertype,
         })
     }
 
@@ -165,7 +165,7 @@ impl EthernetHeader {
 
         buffer[0..6].copy_from_slice(&self.dst.0);
         buffer[6..12].copy_from_slice(&self.src.0);
-        buffer[12..14].copy_from_slice(&self.ethertype.to_be_bytes());
+        buffer[12..14].copy_from_slice(&self.ethertype.to_ne_bytes());
 
         Ok(())
     }

@@ -115,7 +115,6 @@ pub fn is_initialized() -> bool {
 }
 
 /// Common boot parameters that can be queried
-
 /// Get root device parameter (e.g., "/dev/sda1")
 pub fn root_device() -> Option<String> {
     get("root")

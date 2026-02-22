@@ -523,6 +523,7 @@ impl TcpControlBlock {
 
 /// TCP send sequence variables
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub struct TcpSendSequence {
     /// Send unacknowledged
     una: u32,
@@ -556,6 +557,7 @@ impl TcpSendSequence {
 
 /// TCP receive sequence variables
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub struct TcpRecvSequence {
     /// Receive next
     nxt: u32,
@@ -653,6 +655,7 @@ impl TcpSocket {
     }
 
     /// Send SYN-ACK packet
+    #[allow(dead_code)]
     fn send_syn_ack(&mut self, seq: u32, ack: u32) -> Result<(), SocketError> {
         let tcb = self.tcb.lock();
         let remote = tcb.remote_addr.ok_or(SocketError::NotConnected)?;
@@ -679,6 +682,7 @@ impl TcpSocket {
     }
 
     /// Send ACK packet
+    #[allow(dead_code)]
     fn send_ack(&mut self) -> Result<(), SocketError> {
         let tcb = self.tcb.lock();
         let remote = tcb.remote_addr.ok_or(SocketError::NotConnected)?;
