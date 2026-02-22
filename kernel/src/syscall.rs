@@ -301,7 +301,7 @@ pub fn handle_syscall(
             let fd = arg1 as i32;
             let offset = arg2 as i64;
             let whence = arg3 as i32;
-            
+
             match crate::fs::fd::seek_fd(fd, offset, whence) {
                 Ok(new_pos) => Ok(new_pos as usize),
                 Err(_) => Err(errno::EBADF),
@@ -325,33 +325,33 @@ pub fn handle_syscall(
         SyscallNumber::Getcwd => {
             let buf = arg1 as *mut u8;
             let size = arg2;
-            
+
             if buf.is_null() || size == 0 {
                 return Err(errno::EINVAL);
             }
-            
+
             // Get current working directory (default to "/" for now)
             let cwd = "/";
             let cwd_bytes = cwd.as_bytes();
-            
+
             if cwd_bytes.len() + 1 > size {
                 return Err(errno::ERANGE);
             }
-            
+
             unsafe {
                 core::ptr::copy_nonoverlapping(cwd_bytes.as_ptr(), buf, cwd_bytes.len());
                 *buf.add(cwd_bytes.len()) = 0; // Null terminator
             }
-            
+
             Ok(arg1) // Return buffer pointer
         }
         SyscallNumber::Chdir => {
             let path_ptr = arg1 as *const u8;
-            
+
             if path_ptr.is_null() {
                 return Err(errno::EFAULT);
             }
-            
+
             // Read path from user space
             let path = unsafe {
                 let mut len = 0;
@@ -364,7 +364,7 @@ pub fn handle_syscall(
                 let slice = core::slice::from_raw_parts(path_ptr, len);
                 core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
             };
-            
+
             // TODO: Actually change directory and verify it exists
             let _ = path;
             Ok(0)
@@ -372,11 +372,11 @@ pub fn handle_syscall(
         SyscallNumber::Mkdir => {
             let path_ptr = arg1 as *const u8;
             let mode = arg2 as u32;
-            
+
             if path_ptr.is_null() {
                 return Err(errno::EFAULT);
             }
-            
+
             // Read path from user space
             let path = unsafe {
                 let mut len = 0;
@@ -386,18 +386,18 @@ pub fn handle_syscall(
                 let slice = core::slice::from_raw_parts(path_ptr, len);
                 core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
             };
-            
+
             // TODO: Create directory via VFS
             let _ = (path, mode);
             Err(errno::ENOSYS)
         }
         SyscallNumber::Rmdir => {
             let path_ptr = arg1 as *const u8;
-            
+
             if path_ptr.is_null() {
                 return Err(errno::EFAULT);
             }
-            
+
             // Read path
             let path = unsafe {
                 let mut len = 0;
@@ -407,18 +407,18 @@ pub fn handle_syscall(
                 let slice = core::slice::from_raw_parts(path_ptr, len);
                 core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
             };
-            
+
             // TODO: Remove directory via VFS
             let _ = path;
             Err(errno::ENOSYS)
         }
         SyscallNumber::Unlink => {
             let path_ptr = arg1 as *const u8;
-            
+
             if path_ptr.is_null() {
                 return Err(errno::EFAULT);
             }
-            
+
             let path = unsafe {
                 let mut len = 0;
                 while len < 4096 && *path_ptr.add(len) != 0 {
@@ -427,7 +427,7 @@ pub fn handle_syscall(
                 let slice = core::slice::from_raw_parts(path_ptr, len);
                 core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
             };
-            
+
             // TODO: Unlink file via VFS
             let _ = path;
             Err(errno::ENOSYS)
@@ -435,18 +435,18 @@ pub fn handle_syscall(
         SyscallNumber::Rename => {
             let oldpath_ptr = arg1 as *const u8;
             let newpath_ptr = arg2 as *const u8;
-            
+
             if oldpath_ptr.is_null() || newpath_ptr.is_null() {
                 return Err(errno::EFAULT);
             }
-            
+
             // TODO: Rename file via VFS
             let _ = (oldpath_ptr, newpath_ptr);
             Err(errno::ENOSYS)
         }
         SyscallNumber::Gettimeofday => {
             let tv_ptr = arg1 as *mut u64;
-            
+
             if !tv_ptr.is_null() {
                 // Return current uptime in microseconds
                 // TODO: Implement real wall-clock time

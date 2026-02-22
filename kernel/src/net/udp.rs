@@ -206,8 +206,8 @@ impl UdpPortManager {
         let mut port = start;
 
         loop {
-            if !self.bound_ports.contains_key(&port) {
-                self.bound_ports.insert(port, ());
+            if let alloc::collections::btree_map::Entry::Vacant(e) = self.bound_ports.entry(port) {
+                e.insert(());
                 self.next_port.store(
                     if port == UDP_PORT_MAX {
                         UDP_PORT_MIN
@@ -285,6 +285,7 @@ pub fn is_port_bound(port: u16) -> bool {
 }
 
 /// UDP socket implementation
+#[derive(Default)]
 pub struct UdpSocket {
     /// Local address
     local_addr: Option<SocketAddrV4>,
@@ -396,16 +397,6 @@ impl UdpSocket {
         self.remote_addr = None;
         self.recv_buffer.clear();
         Ok(())
-    }
-}
-
-impl Default for UdpSocket {
-    fn default() -> Self {
-        Self {
-            local_addr: None,
-            remote_addr: None,
-            recv_buffer: Vec::new(),
-        }
     }
 }
 

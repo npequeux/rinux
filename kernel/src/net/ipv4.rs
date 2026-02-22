@@ -178,7 +178,7 @@ impl Ipv4Header {
         }
 
         let ihl = (version_ihl & 0x0F) as usize * 4;
-        if ihl < Self::MIN_SIZE || ihl > Self::MAX_SIZE {
+        if !(Self::MIN_SIZE..=Self::MAX_SIZE).contains(&ihl) {
             return Err(Ipv4Error::InvalidHeaderLength);
         }
 

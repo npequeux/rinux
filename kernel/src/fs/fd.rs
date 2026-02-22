@@ -217,16 +217,16 @@ pub fn dup2_fd(oldfd: FileDescriptor, newfd: FileDescriptor) -> Result<FileDescr
     if oldfd == newfd {
         return Ok(newfd);
     }
-    
+
     let table = GLOBAL_FD_TABLE.lock();
     if let Some(ref t) = *table {
         if let Some(file) = t.get_file(oldfd) {
             let new_file = file.clone();
             drop(table);
-            
+
             // Close newfd if it's open
             let _ = free_fd(newfd);
-            
+
             // Allocate at specific fd
             let mut table = GLOBAL_FD_TABLE.lock();
             if let Some(ref mut t) = *table {

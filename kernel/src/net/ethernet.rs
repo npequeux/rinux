@@ -128,7 +128,7 @@ impl EthernetHeader {
         Self {
             dst,
             src,
-            ethertype: ethertype.as_u16().to_be(),
+            ethertype: ethertype.as_u16(),
         }
     }
 
@@ -148,13 +148,13 @@ impl EthernetHeader {
         Ok(Self {
             dst: MacAddress(dst),
             src: MacAddress(src),
-            ethertype: ethertype.to_be(),
+            ethertype,
         })
     }
 
     /// Get EtherType
     pub fn get_ethertype(&self) -> EtherType {
-        EtherType::from_u16(u16::from_be(self.ethertype))
+        EtherType::from_u16(self.ethertype)
     }
 
     /// Write header to buffer
