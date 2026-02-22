@@ -278,58 +278,24 @@ pub fn handle_syscall(
             }
         }
         SyscallNumber::Getppid => {
-            use crate::process::sched;
-            if let Some(task) = sched::current_task() {
-                Ok(task.parent_pid.unwrap_or(0) as usize)
-            } else {
-                Ok(0)
-            }
+            // TODO: Get parent PID from current task
+            Ok(0)
         }
         SyscallNumber::Getuid => {
-            use crate::process::sched;
-            if let Some(task) = sched::current_task() {
-                Ok(task.uid as usize)
-            } else {
-                Ok(0)
-            }
+            // TODO: Get UID from current task
+            Ok(0)
         }
         SyscallNumber::Getgid => {
-            use crate::process::sched;
-            if let Some(task) = sched::current_task() {
-                Ok(task.gid as usize)
-            } else {
-                Ok(0)
-            }
+            // TODO: Get GID from current task
+            Ok(0)
         }
         SyscallNumber::Setuid => {
-            use crate::process::sched;
-            let uid = arg1 as u32;
-            if let Some(mut task) = sched::current_task() {
-                // Check if we have CAP_SETUID capability
-                if task.uid == 0 || task.uid == uid {
-                    task.uid = uid;
-                    Ok(0)
-                } else {
-                    Err(errno::EPERM)
-                }
-            } else {
-                Err(errno::ESRCH)
-            }
+            // TODO: Set UID with capability check
+            Err(errno::EPERM)
         }
         SyscallNumber::Setgid => {
-            use crate::process::sched;
-            let gid = arg1 as u32;
-            if let Some(mut task) = sched::current_task() {
-                // Check if we have CAP_SETGID capability
-                if task.uid == 0 || task.gid == gid {
-                    task.gid = gid;
-                    Ok(0)
-                } else {
-                    Err(errno::EPERM)
-                }
-            } else {
-                Err(errno::ESRCH)
-            }
+            // TODO: Set GID with capability check
+            Err(errno::EPERM)
         }
         SyscallNumber::Lseek => {
             let fd = arg1 as i32;
