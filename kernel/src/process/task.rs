@@ -3,6 +3,9 @@
 //! Process/thread task structure.
 
 use crate::types::{Gid, Pid, Uid};
+use crate::fs::fd::FileDescriptorTable;
+use alloc::sync::Arc;
+use spin::Mutex;
 
 /// Task state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +43,8 @@ pub struct Task {
     pub parent_pid: Option<Pid>,
     /// Exit code (if zombie)
     pub exit_code: Option<i32>,
+    /// Per-process file descriptor table
+    pub fd_table: Arc<Mutex<FileDescriptorTable>>,
 }
 
 impl Task {
@@ -53,6 +58,7 @@ impl Task {
             priority: DEFAULT_PRIORITY,
             parent_pid: None,
             exit_code: None,
+            fd_table: Arc::new(Mutex::new(FileDescriptorTable::new())),
         }
     }
 
@@ -66,7 +72,15 @@ impl Task {
             priority: DEFAULT_PRIORITY,
             parent_pid: Some(parent_pid),
             exit_code: None,
+            fd_table: Arc::new(Mutex::new(FileDescriptorTable::new())),
         }
+    }
+
+    /// Clone the file descriptor table (for fork)
+    pub fn clone_fd_table(&self) -> Arc<Mutex<FileDescriptorTable>> {
+        // For now, just share the same FD table (like Linux with CLONE_FILES)
+        // A full fork would clone the table
+        Arc::clone(&self.fd_table)
     }
 
     /// Set task state
