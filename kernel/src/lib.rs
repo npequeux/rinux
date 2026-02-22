@@ -16,6 +16,7 @@ pub mod net;
 pub mod panic;
 pub mod printk;
 pub mod process;
+pub mod security;
 pub mod signal;
 pub mod syscall;
 pub mod tests;
@@ -45,6 +46,9 @@ pub fn init() {
 
     // Initialize subsystems
     init::early_init();
+
+    // Initialize security subsystem
+    security::init();
 
     // Initialize time subsystem
     time::init();

@@ -3,6 +3,7 @@
 //! Process/thread task structure.
 
 use crate::fs::fd::FileDescriptorTable;
+use crate::security::capabilities::ProcessCapabilities;
 use crate::types::{Gid, Pid, Uid};
 use alloc::sync::Arc;
 use spin::Mutex;
@@ -45,6 +46,8 @@ pub struct Task {
     pub exit_code: Option<i32>,
     /// Per-process file descriptor table
     pub fd_table: Arc<Mutex<FileDescriptorTable>>,
+    /// Process capabilities
+    pub capabilities: Arc<ProcessCapabilities>,
 }
 
 impl Task {
@@ -59,6 +62,7 @@ impl Task {
             parent_pid: None,
             exit_code: None,
             fd_table: Arc::new(Mutex::new(FileDescriptorTable::new())),
+            capabilities: Arc::new(ProcessCapabilities::root()),
         }
     }
 
@@ -73,6 +77,7 @@ impl Task {
             parent_pid: Some(parent_pid),
             exit_code: None,
             fd_table: Arc::new(Mutex::new(FileDescriptorTable::new())),
+            capabilities: Arc::new(ProcessCapabilities::root()),
         }
     }
 
@@ -102,6 +107,16 @@ impl Task {
     /// Check if task is runnable
     pub fn is_runnable(&self) -> bool {
         self.state == TaskState::Running
+    }
+
+    /// Check if task is running as root (uid 0)
+    pub fn is_root(&self) -> bool {
+        self.uid == 0
+    }
+
+    /// Check if task has a specific capability
+    pub fn has_capability(&self, cap: crate::security::capabilities::Capability) -> bool {
+        self.capabilities.has_capability(cap)
     }
 }
 
