@@ -8,6 +8,7 @@
 extern crate alloc;
 extern crate rinux_mm as mm;
 
+pub mod cmdline;
 pub mod fs;
 pub mod init;
 pub mod ipc;

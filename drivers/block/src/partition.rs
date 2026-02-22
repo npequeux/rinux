@@ -7,6 +7,9 @@ use alloc::vec::Vec;
 use alloc::sync::Arc;
 use alloc::string::String;
 
+/// Maximum number of GPT partition entries to read (safety limit to prevent excessive memory usage)
+const MAX_GPT_PARTITIONS: u32 = 128;
+
 /// Partition table type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PartitionTableType {
@@ -238,8 +241,40 @@ pub fn parse_mbr(device: Arc<dyn BlockDevice>) -> Result<Vec<Partition>, &'stati
 
 /// Scan all block devices for partitions
 pub fn scan_all() {
-    // This would iterate through all registered block devices
-    // and parse their partition tables
+    // Get number of registered block devices
+    let device_count = crate::device_count();
+    
+    // Scan each device for partitions
+    for i in 0..device_count {
+        if let Some(device) = crate::get_device(i) {
+            if let Err(e) = scan_device(device) {
+                // Log error (would use printk in full implementation)
+                let _ = e; // Suppress unused variable warning
+            }
+        }
+    }
+}
+
+/// Scan a single block device for partitions
+fn scan_device(device: Arc<dyn BlockDevice>) -> Result<(), &'static str> {
+    // Use the existing helper to detect the partition table type
+    let table_type = detect_partition_table(&*device);
+    
+    match table_type {
+        PartitionTableType::GPT => {
+            // Parse GPT partitions; ignore the returned list for now
+            let _ = parse_gpt(device)?;
+        }
+        PartitionTableType::MBR => {
+            // Parse MBR partitions; ignore the returned list for now
+            let _ = parse_mbr(device)?;
+        }
+        PartitionTableType::Unknown => {
+            // No recognizable partition table found; nothing to do
+        }
+    }
+    
+    Ok(())
 }
 
 #[cfg(test)]
