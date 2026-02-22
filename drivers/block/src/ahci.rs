@@ -153,9 +153,15 @@ fn allocate_aligned(size: usize, alignment: usize) -> Option<*mut u8> {
 }
 
 /// Get physical address from virtual address
-/// In a real implementation, this would walk the page tables
-/// For now, we assume identity mapping in kernel space
+/// 
+/// # Safety
+/// 
+/// This function currently assumes identity mapping in kernel space.
+/// In a production kernel with virtual memory, this would need to walk
+/// the page tables to translate virtual to physical addresses.
 fn virt_to_phys(virt: *const u8) -> u64 {
+    // TODO: Implement proper page table walking for virtual-to-physical translation
+    // For now, we assume identity mapping for kernel DMA buffers
     virt as u64
 }
 
@@ -274,7 +280,7 @@ impl AhciDevice {
             core::ptr::write_volatile(&mut (*port).command_issue as *mut u32, 1);
         }
         
-        // Wait for completion
+        // Wait for completion - only copy data on success
         self.wait_for_completion(port)?;
         
         // Copy data from DMA buffer to user buffer
@@ -332,6 +338,8 @@ impl AhciDevice {
                 if timeout == 0 {
                     return Err(BlockDeviceError::Timeout);
                 }
+                // Yield CPU to reduce busy-waiting overhead
+                core::hint::spin_loop();
             }
             
             // Set FRE (bit 4) and ST (bit 0)
@@ -364,6 +372,8 @@ impl AhciDevice {
                 if timeout == 0 {
                     return Err(BlockDeviceError::Timeout);
                 }
+                // Yield CPU to reduce busy-waiting overhead
+                core::hint::spin_loop();
             }
             
             // Clear FRE (bit 4)
@@ -382,13 +392,18 @@ impl AhciDevice {
         fis: &CommandFis,
         buffer_len: usize,
     ) -> Result<*mut u8, BlockDeviceError> {
+        // Validate buffer length
+        if buffer_len == 0 {
+            return Err(BlockDeviceError::InvalidOffset);
+        }
+        
         unsafe {
             // Allocate command list (1K aligned, minimum 1024 bytes for 32 command slots)
             let cmd_list = allocate_aligned(1024, 1024).ok_or(BlockDeviceError::IoError)?;
             let cmd_header = cmd_list as *mut CommandHeader;
             
             // Allocate command table (128-byte aligned)
-            let cmd_table_size = 128 + 16; // One PRDT entry
+            let cmd_table_size = core::mem::size_of::<CommandTable>() + core::mem::size_of::<PrdtEntry>();
             let cmd_table_ptr = allocate_aligned(cmd_table_size, 128).ok_or(BlockDeviceError::IoError)?;
             let cmd_table = cmd_table_ptr as *mut CommandTable;
             
@@ -402,8 +417,8 @@ impl AhciDevice {
                 core::mem::size_of::<CommandFis>(),
             );
             
-            // Set up PRDT entry
-            let prdt_entry = (cmd_table_ptr as usize + 128) as *mut PrdtEntry;
+            // Set up PRDT entry (located after CommandTable)
+            let prdt_entry = (cmd_table_ptr as usize + core::mem::size_of::<CommandTable>()) as *mut PrdtEntry;
             let phys_addr = virt_to_phys(dma_buffer);
             
             core::ptr::write_volatile(&mut (*prdt_entry).dba as *mut u32, (phys_addr & 0xFFFFFFFF) as u32);
@@ -442,6 +457,9 @@ impl AhciDevice {
             core::ptr::write_volatile(&mut (*port).fis_base as *mut u32, (fis_buffer_phys & 0xFFFFFFFF) as u32);
             core::ptr::write_volatile(&mut (*port).fis_base_upper as *mut u32, ((fis_buffer_phys >> 32) & 0xFFFFFFFF) as u32);
             
+            // TODO: Track allocated memory (cmd_list, cmd_table_ptr, dma_buffer, fis_buffer)
+            // for cleanup after command completion to prevent memory leaks
+            
             Ok(dma_buffer)
         }
     }
@@ -453,13 +471,18 @@ impl AhciDevice {
         fis: &CommandFis,
         buffer: &[u8],
     ) -> Result<(), BlockDeviceError> {
+        // Validate buffer length
+        if buffer.is_empty() {
+            return Err(BlockDeviceError::InvalidOffset);
+        }
+        
         unsafe {
             // Allocate command list (1K aligned, minimum 1024 bytes for 32 command slots)
             let cmd_list = allocate_aligned(1024, 1024).ok_or(BlockDeviceError::IoError)?;
             let cmd_header = cmd_list as *mut CommandHeader;
             
             // Allocate command table (128-byte aligned)
-            let cmd_table_size = 128 + 16; // One PRDT entry
+            let cmd_table_size = core::mem::size_of::<CommandTable>() + core::mem::size_of::<PrdtEntry>();
             let cmd_table_ptr = allocate_aligned(cmd_table_size, 128).ok_or(BlockDeviceError::IoError)?;
             let cmd_table = cmd_table_ptr as *mut CommandTable;
             
@@ -476,8 +499,8 @@ impl AhciDevice {
                 core::mem::size_of::<CommandFis>(),
             );
             
-            // Set up PRDT entry
-            let prdt_entry = (cmd_table_ptr as usize + 128) as *mut PrdtEntry;
+            // Set up PRDT entry (located after CommandTable)
+            let prdt_entry = (cmd_table_ptr as usize + core::mem::size_of::<CommandTable>()) as *mut PrdtEntry;
             let phys_addr = virt_to_phys(dma_buffer);
             
             core::ptr::write_volatile(&mut (*prdt_entry).dba as *mut u32, (phys_addr & 0xFFFFFFFF) as u32);
@@ -515,6 +538,9 @@ impl AhciDevice {
             let fis_buffer_phys = virt_to_phys(fis_buffer);
             core::ptr::write_volatile(&mut (*port).fis_base as *mut u32, (fis_buffer_phys & 0xFFFFFFFF) as u32);
             core::ptr::write_volatile(&mut (*port).fis_base_upper as *mut u32, ((fis_buffer_phys >> 32) & 0xFFFFFFFF) as u32);
+            
+            // TODO: Track allocated memory (cmd_list, cmd_table_ptr, dma_buffer, fis_buffer)
+            // for cleanup after command completion to prevent memory leaks
             
             Ok(())
         }
