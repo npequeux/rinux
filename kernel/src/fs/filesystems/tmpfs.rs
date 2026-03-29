@@ -360,10 +360,198 @@ impl Tmpfs {
         Ok(inode_num)
     }
 
+    /// Resolve a path to an inode number
+    ///
+    /// Supports absolute paths (starting with `/`).
+    pub fn lookup_path(&self, path: &str) -> Result<InodeNumber, &'static str> {
+        let inodes = self.inodes.lock();
+
+        if path.is_empty() || path == "/" {
+            return Ok(self.root_inode);
+        }
+
+        let mut current = self.root_inode;
+
+        for component in path.trim_start_matches('/').split('/') {
+            if component.is_empty() || component == "." {
+                continue;
+            }
+            let inode = inodes.get(&current).ok_or("Inode not found")?;
+            match &inode.data {
+                InodeData::Directory(entries) => {
+                    current = *entries.get(component).ok_or("No such file or directory")?;
+                }
+                _ => return Err("Not a directory"),
+            }
+        }
+
+        Ok(current)
+    }
+
+    /// Remove a file from its parent directory (unlink)
+    pub fn unlink(&self, parent: InodeNumber, name: &str) -> Result<(), &'static str> {
+        let mut inodes = self.inodes.lock();
+
+        let file_inode_num = match inodes.get(&parent) {
+            Some(p) => match &p.data {
+                InodeData::Directory(entries) => {
+                    *entries.get(name).ok_or("No such file or directory")?
+                }
+                _ => return Err("Not a directory"),
+            },
+            None => return Err("Parent directory not found"),
+        };
+
+        if let Some(inode) = inodes.get(&file_inode_num) {
+            if inode.is_directory() {
+                return Err("Is a directory");
+            }
+        } else {
+            return Err("Inode not found");
+        }
+
+        // Remove entry from parent directory
+        if let Some(parent_inode) = inodes.get_mut(&parent) {
+            parent_inode.remove_entry(name)?;
+        }
+
+        // Decrement link count and free inode if zero
+        if let Some(inode) = inodes.get_mut(&file_inode_num) {
+            inode.link_count = inode.link_count.saturating_sub(1);
+            if inode.link_count == 0 {
+                inodes.remove(&file_inode_num);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Remove an empty directory
+    pub fn rmdir(&self, parent: InodeNumber, name: &str) -> Result<(), &'static str> {
+        let mut inodes = self.inodes.lock();
+
+        let dir_inode_num = match inodes.get(&parent) {
+            Some(p) => match &p.data {
+                InodeData::Directory(entries) => {
+                    *entries.get(name).ok_or("No such file or directory")?
+                }
+                _ => return Err("Not a directory"),
+            },
+            None => return Err("Parent directory not found"),
+        };
+
+        match inodes.get(&dir_inode_num) {
+            Some(inode) => {
+                if !inode.is_directory() {
+                    return Err("Not a directory");
+                }
+                if let InodeData::Directory(entries) = &inode.data {
+                    if entries.len() > 2 {
+                        return Err("Directory not empty");
+                    }
+                }
+            }
+            None => return Err("Inode not found"),
+        }
+
+        if let Some(parent_inode) = inodes.get_mut(&parent) {
+            parent_inode.remove_entry(name)?;
+            parent_inode.link_count = parent_inode.link_count.saturating_sub(1);
+        }
+
+        inodes.remove(&dir_inode_num);
+        Ok(())
+    }
+
+    /// Rename a file or directory
+    pub fn rename(
+        &self,
+        old_parent: InodeNumber,
+        old_name: &str,
+        new_parent: InodeNumber,
+        new_name: &str,
+    ) -> Result<(), &'static str> {
+        let mut inodes = self.inodes.lock();
+
+        let inode_num = match inodes.get(&old_parent) {
+            Some(p) => match &p.data {
+                InodeData::Directory(entries) => {
+                    *entries.get(old_name).ok_or("No such file or directory")?
+                }
+                _ => return Err("Not a directory"),
+            },
+            None => return Err("Old parent not found"),
+        };
+
+        if !inodes.contains_key(&new_parent) {
+            return Err("New parent directory not found");
+        }
+
+        // Remove from old parent
+        if let Some(old_parent_inode) = inodes.get_mut(&old_parent) {
+            old_parent_inode.remove_entry(old_name)?;
+        }
+
+        // Add to new parent, overwriting any existing entry with the same name
+        if let Some(new_parent_inode) = inodes.get_mut(&new_parent) {
+            match &mut new_parent_inode.data {
+                InodeData::Directory(entries) => {
+                    entries.insert(String::from(new_name), inode_num);
+                }
+                _ => return Err("New parent is not a directory"),
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Get file stat information
+    pub fn stat(&self, inode_num: InodeNumber) -> Result<FileStat, &'static str> {
+        let inodes = self.inodes.lock();
+        let inode = inodes.get(&inode_num).ok_or("Inode not found")?;
+        Ok(FileStat {
+            inode: inode.number,
+            file_type: inode.file_type,
+            mode: inode.permissions.to_mode(),
+            uid: inode.uid,
+            gid: inode.gid,
+            size: inode.size,
+            link_count: inode.link_count,
+            created_time: inode.created_time,
+            modified_time: inode.modified_time,
+            accessed_time: inode.accessed_time,
+        })
+    }
+
     /// Root inode number
     pub fn root(&self) -> InodeNumber {
         self.root_inode
     }
+}
+
+/// File stat information returned by stat/fstat
+#[derive(Debug, Clone, Copy)]
+pub struct FileStat {
+    /// Inode number
+    pub inode: InodeNumber,
+    /// File type
+    pub file_type: FileType,
+    /// Permission mode bits
+    pub mode: u16,
+    /// User ID of owner
+    pub uid: u32,
+    /// Group ID of owner
+    pub gid: u32,
+    /// File size in bytes
+    pub size: u64,
+    /// Number of hard links
+    pub link_count: u32,
+    /// Creation time
+    pub created_time: u64,
+    /// Last modification time
+    pub modified_time: u64,
+    /// Last access time
+    pub accessed_time: u64,
 }
 
 impl Default for Tmpfs {
@@ -386,6 +574,97 @@ pub fn get() -> Option<Tmpfs> {
     // This is a simplified approach - cloning the entire filesystem
     // Real implementation would use Arc or similar
     None // Return None for now as cloning is complex
+}
+
+/// Resolve a path in the global tmpfs
+pub fn global_lookup_path(path: &str) -> Result<InodeNumber, &'static str> {
+    let fs = TMPFS.lock();
+    fs.as_ref()
+        .ok_or("Tmpfs not initialized")?
+        .lookup_path(path)
+}
+
+/// Create a directory in the global tmpfs
+pub fn global_mkdir(path: &str) -> Result<InodeNumber, &'static str> {
+    let (parent_path, name) = split_path(path);
+    let parent_inode = global_lookup_path(parent_path)?;
+    let fs = TMPFS.lock();
+    fs.as_ref()
+        .ok_or("Tmpfs not initialized")?
+        .create_directory(parent_inode, String::from(name))
+}
+
+/// Remove a directory in the global tmpfs
+pub fn global_rmdir(path: &str) -> Result<(), &'static str> {
+    let (parent_path, name) = split_path(path);
+    let parent_inode = global_lookup_path(parent_path)?;
+    let fs = TMPFS.lock();
+    fs.as_ref()
+        .ok_or("Tmpfs not initialized")?
+        .rmdir(parent_inode, name)
+}
+
+/// Unlink a file in the global tmpfs
+pub fn global_unlink(path: &str) -> Result<(), &'static str> {
+    let (parent_path, name) = split_path(path);
+    let parent_inode = global_lookup_path(parent_path)?;
+    let fs = TMPFS.lock();
+    fs.as_ref()
+        .ok_or("Tmpfs not initialized")?
+        .unlink(parent_inode, name)
+}
+
+/// Rename a path in the global tmpfs
+pub fn global_rename(old_path: &str, new_path: &str) -> Result<(), &'static str> {
+    let (old_parent_path, old_name) = split_path(old_path);
+    let (new_parent_path, new_name) = split_path(new_path);
+    let old_parent = global_lookup_path(old_parent_path)?;
+    let new_parent = global_lookup_path(new_parent_path)?;
+    let fs = TMPFS.lock();
+    fs.as_ref()
+        .ok_or("Tmpfs not initialized")?
+        .rename(old_parent, old_name, new_parent, new_name)
+}
+
+/// Get stat information for a path in the global tmpfs
+pub fn global_stat(path: &str) -> Result<FileStat, &'static str> {
+    let inode_num = global_lookup_path(path)?;
+    let fs = TMPFS.lock();
+    fs.as_ref().ok_or("Tmpfs not initialized")?.stat(inode_num)
+}
+
+/// Get stat information for an inode number directly in the global tmpfs
+///
+/// Returns `None` if tmpfs is not initialized or the inode does not exist.
+pub fn global_stat_inode(inode_num: InodeNumber) -> Option<FileStat> {
+    let fs = TMPFS.lock();
+    fs.as_ref()?.stat(inode_num).ok()
+}
+
+/// Create a file in the global tmpfs
+pub fn global_create_file(path: &str) -> Result<InodeNumber, &'static str> {
+    let (parent_path, name) = split_path(path);
+    let parent_inode = global_lookup_path(parent_path)?;
+    let fs = TMPFS.lock();
+    fs.as_ref()
+        .ok_or("Tmpfs not initialized")?
+        .create_file(parent_inode, String::from(name))
+}
+
+/// Get the root inode number of the global tmpfs
+pub fn global_root() -> Result<InodeNumber, &'static str> {
+    let fs = TMPFS.lock();
+    Ok(fs.as_ref().ok_or("Tmpfs not initialized")?.root())
+}
+
+/// Split a path into its parent directory and final component
+fn split_path(path: &str) -> (&str, &str) {
+    let path = path.trim_end_matches('/');
+    match path.rfind('/') {
+        Some(0) => ("/", &path[1..]),
+        Some(pos) => (&path[..pos], &path[pos + 1..]),
+        None => ("/", path),
+    }
 }
 
 #[cfg(test)]
@@ -447,5 +726,86 @@ mod tests {
         let read = inode.read(0, &mut read_buffer).unwrap();
         assert_eq!(read, write_data.len());
         assert_eq!(&read_buffer, write_data);
+    }
+
+    #[test]
+    fn test_lookup_path() {
+        let fs = Tmpfs::new();
+        fs.create_directory(fs.root(), String::from("etc")).unwrap();
+        fs.create_directory(fs.root(), String::from("usr")).unwrap();
+
+        let etc_inode = fs.lookup_path("/etc").unwrap();
+        assert_ne!(etc_inode, fs.root());
+
+        let root_inode = fs.lookup_path("/").unwrap();
+        assert_eq!(root_inode, fs.root());
+    }
+
+    #[test]
+    fn test_unlink() {
+        let fs = Tmpfs::new();
+        let file_inode = fs
+            .create_file(fs.root(), String::from("todelete.txt"))
+            .unwrap();
+        assert!(fs.get_inode(file_inode).is_some());
+
+        fs.unlink(fs.root(), "todelete.txt").unwrap();
+        assert!(fs.get_inode(file_inode).is_none());
+    }
+
+    #[test]
+    fn test_rmdir() {
+        let fs = Tmpfs::new();
+        let dir_inode = fs
+            .create_directory(fs.root(), String::from("emptydir"))
+            .unwrap();
+        assert!(fs.get_inode(dir_inode).is_some());
+
+        fs.rmdir(fs.root(), "emptydir").unwrap();
+        assert!(fs.get_inode(dir_inode).is_none());
+    }
+
+    #[test]
+    fn test_rmdir_nonempty_fails() {
+        let fs = Tmpfs::new();
+        let dir_inode = fs
+            .create_directory(fs.root(), String::from("nonempty"))
+            .unwrap();
+        fs.create_file(dir_inode, String::from("file.txt")).unwrap();
+
+        assert!(fs.rmdir(fs.root(), "nonempty").is_err());
+    }
+
+    #[test]
+    fn test_rename() {
+        let fs = Tmpfs::new();
+        fs.create_file(fs.root(), String::from("old.txt")).unwrap();
+
+        fs.rename(fs.root(), "old.txt", fs.root(), "new.txt")
+            .unwrap();
+
+        assert!(fs.lookup_path("/old.txt").is_err());
+        assert!(fs.lookup_path("/new.txt").is_ok());
+    }
+
+    #[test]
+    fn test_stat() {
+        let fs = Tmpfs::new();
+        let file_inode = fs
+            .create_file(fs.root(), String::from("stat_test.txt"))
+            .unwrap();
+
+        let stat = fs.stat(file_inode).unwrap();
+        assert_eq!(stat.inode, file_inode);
+        assert_eq!(stat.file_type, FileType::Regular);
+        assert_eq!(stat.size, 0);
+    }
+
+    #[test]
+    fn test_split_path() {
+        assert_eq!(split_path("/etc/passwd"), ("/etc", "passwd"));
+        assert_eq!(split_path("/file.txt"), ("/", "file.txt"));
+        assert_eq!(split_path("file.txt"), ("/", "file.txt"));
+        assert_eq!(split_path("/a/b/c"), ("/a/b", "c"));
     }
 }

@@ -194,13 +194,22 @@ impl SlabAllocator {
                 return ptr;
             }
 
-            // Slab is full, try to allocate a new slab
-            // For simplicity, we'll just use the fallback for now
-            // TODO: In a real implementation, we'd track multiple slabs per size class
-            // and initialize them here without double-borrowing
+            // Current slab is full – grow by initializing it with a fresh page from
+            // the bump allocator.  This effectively replaces the exhausted slab's
+            // free-list with a brand-new one, allowing continued allocation until the
+            // next exhaustion event.
+            if let Some(memory) = self.allocate_slab_memory() {
+                unsafe {
+                    self.size_classes[class_idx].initialize(memory);
+                }
+                if let Some(ptr) = self.size_classes[class_idx].allocate() {
+                    return ptr;
+                }
+            }
         }
 
-        // Fall back to bump allocator for large allocations
+        // Fall back to bump allocator for large allocations or when all slabs are
+        // exhausted.
         self.fallback.alloc(layout)
     }
 

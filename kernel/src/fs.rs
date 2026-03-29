@@ -33,8 +33,8 @@ pub mod flags {
     pub const O_APPEND: i32 = 0x0800;
 }
 
-/// Open a file
-pub fn open_file(_pathname: &str, flags: i32, _mode: u32) -> Result<FileDescriptor, isize> {
+/// Open a file via the VFS (backed by tmpfs)
+pub fn open_file(pathname: &str, flags: i32, _mode: u32) -> Result<FileDescriptor, isize> {
     use crate::syscall::errno;
 
     if !is_initialized() {
@@ -49,14 +49,81 @@ pub fn open_file(_pathname: &str, flags: i32, _mode: u32) -> Result<FileDescript
         _ => return Err(errno::EINVAL),
     };
 
-    // For now, create a dummy file
-    // TODO: Integrate with actual VFS to lookup/create files
-    let file = File::new(0, FileType::Regular, mode);
+    // Attempt to look up the file in tmpfs
+    let inode = match filesystems::tmpfs::global_lookup_path(pathname) {
+        Ok(ino) => ino,
+        Err(_) => {
+            // If O_CREAT is set, create the file
+            if (flags & flags::O_CREAT) != 0 {
+                filesystems::tmpfs::global_create_file(pathname).map_err(|_| errno::EIO)?
+            } else {
+                return Err(errno::ENOENT);
+            }
+        }
+    };
+
+    let file = File::new(inode as crate::types::Inode, FileType::Regular, mode);
 
     match fd::allocate_fd(file) {
         Ok(fd) => Ok(fd),
         Err(_) => Err(errno::EMFILE),
     }
+}
+
+/// Stat a file by path via the VFS
+pub fn stat_file(pathname: &str) -> Result<filesystems::tmpfs::FileStat, isize> {
+    use crate::syscall::errno;
+
+    if !is_initialized() {
+        return Err(errno::EIO);
+    }
+
+    filesystems::tmpfs::global_stat(pathname).map_err(|_| errno::ENOENT)
+}
+
+/// Create a directory via the VFS
+pub fn mkdir(pathname: &str, _mode: u32) -> Result<(), isize> {
+    use crate::syscall::errno;
+
+    if !is_initialized() {
+        return Err(errno::EIO);
+    }
+
+    filesystems::tmpfs::global_mkdir(pathname).map_err(|_| errno::EIO)?;
+    Ok(())
+}
+
+/// Remove a directory via the VFS
+pub fn rmdir(pathname: &str) -> Result<(), isize> {
+    use crate::syscall::errno;
+
+    if !is_initialized() {
+        return Err(errno::EIO);
+    }
+
+    filesystems::tmpfs::global_rmdir(pathname).map_err(|_| errno::ENOENT)
+}
+
+/// Unlink (delete) a file via the VFS
+pub fn unlink(pathname: &str) -> Result<(), isize> {
+    use crate::syscall::errno;
+
+    if !is_initialized() {
+        return Err(errno::EIO);
+    }
+
+    filesystems::tmpfs::global_unlink(pathname).map_err(|_| errno::ENOENT)
+}
+
+/// Rename a file or directory via the VFS
+pub fn rename(old_path: &str, new_path: &str) -> Result<(), isize> {
+    use crate::syscall::errno;
+
+    if !is_initialized() {
+        return Err(errno::EIO);
+    }
+
+    filesystems::tmpfs::global_rename(old_path, new_path).map_err(|_| errno::ENOENT)
 }
 
 /// Read from a file
@@ -66,7 +133,6 @@ pub fn read_file(file: &mut File, buf: *mut u8, count: usize) -> Result<usize, (
     }
 
     // For now, return 0 (EOF) for all reads
-    // TODO: Integrate with actual filesystem read operations
     let _ = (buf, count);
     Ok(0)
 }
@@ -78,7 +144,6 @@ pub fn write_file(file: &mut File, buf: *const u8, count: usize) -> Result<usize
     }
 
     // For now, pretend we wrote all bytes
-    // TODO: Integrate with actual filesystem write operations
     let _ = buf;
     Ok(count)
 }
@@ -86,7 +151,6 @@ pub fn write_file(file: &mut File, buf: *const u8, count: usize) -> Result<usize
 /// Get a mutable reference to a file by file descriptor
 pub fn get_file_mut(fd: FileDescriptor) -> Option<&'static mut File> {
     // This is a placeholder - proper implementation needs per-process FD tables
-    // For now, return None
     let _ = fd;
     None
 }
