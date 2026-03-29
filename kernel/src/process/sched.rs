@@ -196,6 +196,51 @@ pub fn current_pid() -> Option<Pid> {
     sched.current_pid()
 }
 
+/// Get the parent PID of the current task
+pub fn current_ppid() -> Option<Pid> {
+    let sched = SCHEDULER.lock();
+    let current = sched.current_pid()?;
+    sched.get_task(current)?.parent_pid
+}
+
+/// Get the user ID of the current task
+pub fn current_uid() -> u32 {
+    let sched = SCHEDULER.lock();
+    sched
+        .current_pid()
+        .and_then(|pid| sched.get_task(pid))
+        .map(|t| t.uid)
+        .unwrap_or(0)
+}
+
+/// Get the group ID of the current task
+pub fn current_gid() -> u32 {
+    let sched = SCHEDULER.lock();
+    sched
+        .current_pid()
+        .and_then(|pid| sched.get_task(pid))
+        .map(|t| t.gid)
+        .unwrap_or(0)
+}
+
+/// Set the user ID of the current task, returns `Err` if no current task
+pub fn set_current_uid(uid: u32) -> Result<(), ()> {
+    let mut sched = SCHEDULER.lock();
+    let pid = sched.current_pid().ok_or(())?;
+    let task = sched.get_task_mut(pid).ok_or(())?;
+    task.uid = uid;
+    Ok(())
+}
+
+/// Set the group ID of the current task, returns `Err` if no current task
+pub fn set_current_gid(gid: u32) -> Result<(), ()> {
+    let mut sched = SCHEDULER.lock();
+    let pid = sched.current_pid().ok_or(())?;
+    let task = sched.get_task_mut(pid).ok_or(())?;
+    task.gid = gid;
+    Ok(())
+}
+
 /// Get task count
 pub fn task_count() -> usize {
     let sched = SCHEDULER.lock();

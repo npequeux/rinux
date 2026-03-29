@@ -128,6 +128,10 @@ pub mod errno {
     pub const EIO: isize = -5;
     /// Bad file descriptor
     pub const EBADF: isize = -9;
+    /// No child processes
+    pub const ECHILD: isize = -10;
+    /// Try again (resource temporarily unavailable)
+    pub const EAGAIN: isize = -11;
     /// Out of memory
     pub const ENOMEM: isize = -12;
     /// Permission denied
@@ -148,6 +152,29 @@ pub mod errno {
     pub const ERANGE: isize = -34;
     /// Function not implemented
     pub const ENOSYS: isize = -38;
+}
+
+/// Kernel stat structure (subset of POSIX struct stat)
+#[repr(C)]
+pub struct KernelStat {
+    /// Inode number
+    pub st_ino: u64,
+    /// File mode and type
+    pub st_mode: u32,
+    /// Number of hard links
+    pub st_nlink: u32,
+    /// User ID of owner
+    pub st_uid: u32,
+    /// Group ID of owner
+    pub st_gid: u32,
+    /// Total size in bytes
+    pub st_size: i64,
+    /// Last access time (seconds)
+    pub st_atime: i64,
+    /// Last modification time (seconds)
+    pub st_mtime: i64,
+    /// Last status change time (seconds)
+    pub st_ctime: i64,
 }
 
 /// Handle a system call
@@ -246,8 +273,11 @@ pub fn handle_syscall(
             }
         }
         SyscallNumber::Fork => {
-            // TODO: Implement fork - create child process
-            Err(errno::ENOSYS)
+            // Create a child process using the fork subsystem
+            match crate::process::fork::do_fork() {
+                Ok(child_pid) => Ok(child_pid as usize),
+                Err(_) => Err(errno::ENOMEM),
+            }
         }
         SyscallNumber::Execve => {
             // TODO: Implement execve - replace process image
@@ -266,8 +296,42 @@ pub fn handle_syscall(
             Err(errno::ESRCH)
         }
         SyscallNumber::Wait4 => {
-            // TODO: Implement wait4 - wait for process
-            Err(errno::ENOSYS)
+            // arg1: pid (-1 = any child), arg2: status ptr, arg3: options
+            let wait_pid = arg1 as i32;
+            let status_ptr = arg2 as *mut i32;
+            let options = arg3 as i32;
+
+            use crate::process::sched;
+            use crate::process::wait::{wait_any, wait_pid as wait_for_pid, WaitResult};
+
+            let parent_pid = sched::current_pid().unwrap_or(0);
+
+            let result = if wait_pid == -1 {
+                wait_any(parent_pid, options)
+            } else {
+                wait_for_pid(parent_pid, wait_pid, options)
+            };
+
+            match result {
+                Ok(WaitResult::Exited(child_pid, status)) => {
+                    if !status_ptr.is_null() {
+                        unsafe {
+                            *status_ptr = status.status;
+                        }
+                    }
+                    Ok(child_pid as usize)
+                }
+                Ok(WaitResult::NoChild) => Err(errno::ECHILD),
+                // Child is still running: with WNOHANG return 0, otherwise EAGAIN
+                Ok(WaitResult::Waiting) => {
+                    if (options & crate::process::wait::wait_options::WNOHANG) != 0 {
+                        Ok(0)
+                    } else {
+                        Err(errno::EAGAIN)
+                    }
+                }
+                Err(_) => Err(errno::ECHILD),
+            }
         }
         SyscallNumber::Getpid => {
             use crate::process::sched;
@@ -278,24 +342,42 @@ pub fn handle_syscall(
             }
         }
         SyscallNumber::Getppid => {
-            // TODO: Get parent PID from current task
-            Ok(0)
+            use crate::process::sched;
+            Ok(sched::current_ppid().unwrap_or(0) as usize)
         }
         SyscallNumber::Getuid => {
-            // TODO: Get UID from current task
-            Ok(0)
+            use crate::process::sched;
+            Ok(sched::current_uid() as usize)
         }
         SyscallNumber::Getgid => {
-            // TODO: Get GID from current task
-            Ok(0)
+            use crate::process::sched;
+            Ok(sched::current_gid() as usize)
         }
         SyscallNumber::Setuid => {
-            // TODO: Set UID with capability check
-            Err(errno::EPERM)
+            // arg1: uid
+            let new_uid = arg1 as u32;
+            use crate::process::sched;
+            // Only root (uid 0) or processes with CAP_SETUID can change uid
+            if sched::current_uid() != 0 {
+                return Err(errno::EPERM);
+            }
+            match sched::set_current_uid(new_uid) {
+                Ok(()) => Ok(0),
+                Err(()) => Err(errno::ESRCH),
+            }
         }
         SyscallNumber::Setgid => {
-            // TODO: Set GID with capability check
-            Err(errno::EPERM)
+            // arg1: gid
+            let new_gid = arg1 as u32;
+            use crate::process::sched;
+            // Only root (uid 0) or processes with CAP_SETGID can change gid
+            if sched::current_uid() != 0 {
+                return Err(errno::EPERM);
+            }
+            match sched::set_current_gid(new_gid) {
+                Ok(()) => Ok(0),
+                Err(()) => Err(errno::ESRCH),
+            }
         }
         SyscallNumber::Lseek => {
             let fd = arg1 as i32;
@@ -365,9 +447,11 @@ pub fn handle_syscall(
                 core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
             };
 
-            // TODO: Actually change directory and verify it exists
-            let _ = path;
-            Ok(0)
+            // Verify the directory exists in tmpfs
+            match crate::fs::filesystems::tmpfs::global_lookup_path(path) {
+                Ok(_) => Ok(0),
+                Err(_) => Err(errno::ENOENT),
+            }
         }
         SyscallNumber::Mkdir => {
             let path_ptr = arg1 as *const u8;
@@ -387,9 +471,11 @@ pub fn handle_syscall(
                 core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
             };
 
-            // TODO: Create directory via VFS
-            let _ = (path, mode);
-            Err(errno::ENOSYS)
+            // Create directory via VFS (tmpfs)
+            match crate::fs::mkdir(path, mode) {
+                Ok(()) => Ok(0),
+                Err(e) => Err(e),
+            }
         }
         SyscallNumber::Rmdir => {
             let path_ptr = arg1 as *const u8;
@@ -408,9 +494,11 @@ pub fn handle_syscall(
                 core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
             };
 
-            // TODO: Remove directory via VFS
-            let _ = path;
-            Err(errno::ENOSYS)
+            // Remove directory via VFS (tmpfs)
+            match crate::fs::rmdir(path) {
+                Ok(()) => Ok(0),
+                Err(e) => Err(e),
+            }
         }
         SyscallNumber::Unlink => {
             let path_ptr = arg1 as *const u8;
@@ -428,9 +516,11 @@ pub fn handle_syscall(
                 core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
             };
 
-            // TODO: Unlink file via VFS
-            let _ = path;
-            Err(errno::ENOSYS)
+            // Unlink file via VFS (tmpfs)
+            match crate::fs::unlink(path) {
+                Ok(()) => Ok(0),
+                Err(e) => Err(e),
+            }
         }
         SyscallNumber::Rename => {
             let oldpath_ptr = arg1 as *const u8;
@@ -440,20 +530,40 @@ pub fn handle_syscall(
                 return Err(errno::EFAULT);
             }
 
-            // TODO: Rename file via VFS
-            let _ = (oldpath_ptr, newpath_ptr);
-            Err(errno::ENOSYS)
+            let oldpath = unsafe {
+                let mut len = 0;
+                while len < 4096 && *oldpath_ptr.add(len) != 0 {
+                    len += 1;
+                }
+                let slice = core::slice::from_raw_parts(oldpath_ptr, len);
+                core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
+            };
+
+            let newpath = unsafe {
+                let mut len = 0;
+                while len < 4096 && *newpath_ptr.add(len) != 0 {
+                    len += 1;
+                }
+                let slice = core::slice::from_raw_parts(newpath_ptr, len);
+                core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
+            };
+
+            match crate::fs::rename(oldpath, newpath) {
+                Ok(()) => Ok(0),
+                Err(e) => Err(e),
+            }
         }
         SyscallNumber::Gettimeofday => {
             let tv_ptr = arg1 as *mut u64;
 
             if !tv_ptr.is_null() {
-                // Return current uptime in microseconds
-                // TODO: Implement real wall-clock time
+                // Return uptime-based time (seconds and microseconds)
+                let uptime_ms = crate::time::uptime_ms();
+                let seconds = uptime_ms / 1000;
+                let microseconds = (uptime_ms % 1000) * 1000;
                 unsafe {
-                    // For now, return uptime (simplified)
-                    *tv_ptr = 0; // seconds
-                    *tv_ptr.add(1) = 0; // microseconds
+                    *tv_ptr = seconds;
+                    *tv_ptr.add(1) = microseconds;
                 }
             }
             Ok(0)
@@ -502,22 +612,93 @@ pub fn handle_syscall(
             Ok(0)
         }
         SyscallNumber::Time => {
-            // POSIX time(2): should return seconds since Unix epoch.
-            // We currently only have uptime, not a real wall-clock, so this is unimplemented.
-            Err(errno::ENOSYS)
+            // POSIX time(2): returns seconds since Unix epoch via uptime.
+            // arg1: optional *mut time_t to write result to
+            let t_ptr = arg1 as *mut u64;
+            let uptime_sec = crate::time::uptime_sec();
+            if !t_ptr.is_null() {
+                unsafe {
+                    *t_ptr = uptime_sec;
+                }
+            }
+            Ok(uptime_sec as usize)
         }
         SyscallNumber::Stat => {
-            // TODO: Implement stat
-            Err(errno::ENOSYS)
+            // arg1: pathname ptr, arg2: stat buf ptr
+            let pathname_ptr = arg1 as *const u8;
+            let stat_buf = arg2 as *mut KernelStat;
+
+            if pathname_ptr.is_null() {
+                return Err(errno::EFAULT);
+            }
+
+            let pathname = unsafe {
+                let mut len = 0;
+                while len < 4096 && *pathname_ptr.add(len) != 0 {
+                    len += 1;
+                }
+                if len == 0 {
+                    return Err(errno::EINVAL);
+                }
+                let slice = core::slice::from_raw_parts(pathname_ptr, len);
+                core::str::from_utf8(slice).map_err(|_| errno::EINVAL)?
+            };
+
+            match crate::fs::stat_file(pathname) {
+                Ok(info) => {
+                    if !stat_buf.is_null() {
+                        unsafe {
+                            (*stat_buf).st_ino = info.inode;
+                            (*stat_buf).st_mode = info.mode as u32;
+                            (*stat_buf).st_nlink = info.link_count;
+                            (*stat_buf).st_uid = info.uid;
+                            (*stat_buf).st_gid = info.gid;
+                            (*stat_buf).st_size = info.size as i64;
+                            (*stat_buf).st_atime = info.accessed_time as i64;
+                            (*stat_buf).st_mtime = info.modified_time as i64;
+                            (*stat_buf).st_ctime = info.created_time as i64;
+                        }
+                    }
+                    Ok(0)
+                }
+                Err(e) => Err(e),
+            }
         }
         SyscallNumber::Fstat => {
-            // TODO: Implement fstat
-            Err(errno::ENOSYS)
+            // arg1: fd, arg2: stat buf ptr
+            let fd = arg1 as i32;
+            let stat_buf = arg2 as *mut KernelStat;
+
+            let file = match crate::fs::fd::get_file(fd) {
+                Some(f) => f,
+                None => return Err(errno::EBADF),
+            };
+
+            if !stat_buf.is_null() {
+                // Try to look up actual inode metadata from tmpfs
+                let info = crate::fs::filesystems::tmpfs::global_stat_inode(file.inode);
+                unsafe {
+                    (*stat_buf).st_ino = file.inode;
+                    (*stat_buf).st_mode = info.as_ref().map(|s| s.mode as u32).unwrap_or(0o644);
+                    (*stat_buf).st_nlink = info.as_ref().map(|s| s.link_count).unwrap_or(1);
+                    (*stat_buf).st_uid = info.as_ref().map(|s| s.uid).unwrap_or(0);
+                    (*stat_buf).st_gid = info.as_ref().map(|s| s.gid).unwrap_or(0);
+                    (*stat_buf).st_size = info
+                        .as_ref()
+                        .map(|s| s.size as i64)
+                        .unwrap_or(file.size as i64);
+                    (*stat_buf).st_atime =
+                        info.as_ref().map(|s| s.accessed_time as i64).unwrap_or(0);
+                    (*stat_buf).st_mtime =
+                        info.as_ref().map(|s| s.modified_time as i64).unwrap_or(0);
+                    (*stat_buf).st_ctime =
+                        info.as_ref().map(|s| s.created_time as i64).unwrap_or(0);
+                }
+            }
+            Ok(0)
         }
         SyscallNumber::Unknown => {
-            crate::printk::printk("Unknown syscall: ");
-            // TODO: Print syscall number
-            crate::printk::printk("\n");
+            crate::printk::printk("Unknown syscall\n");
             Err(errno::ENOSYS)
         }
     }

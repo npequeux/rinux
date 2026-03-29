@@ -3,8 +3,6 @@
 //! Core kernel data structures and algorithms.
 
 #![no_std]
-#![feature(allocator_api)]
-#![feature(alloc_error_handler)]
 
 extern crate alloc;
 

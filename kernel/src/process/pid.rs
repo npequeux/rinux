@@ -3,21 +3,58 @@
 //! Process ID allocation and management.
 
 use crate::types::Pid;
+use alloc::collections::VecDeque;
 use spin::Mutex;
 
-static NEXT_PID: Mutex<Pid> = Mutex::new(1);
+/// Maximum PID value before wrapping
+const PID_MAX: Pid = 32768;
+
+/// PID allocator state
+struct PidAllocator {
+    next: Pid,
+    recycled: VecDeque<Pid>,
+}
+
+impl PidAllocator {
+    const fn new() -> Self {
+        PidAllocator {
+            next: 1,
+            recycled: VecDeque::new(),
+        }
+    }
+
+    fn allocate(&mut self) -> Pid {
+        // Prefer recycled PIDs
+        if let Some(pid) = self.recycled.pop_front() {
+            return pid;
+        }
+        let pid = self.next;
+        // Wrap to 1 after PID_MAX so that PID_MAX itself is allocated before wrapping
+        self.next = if self.next >= PID_MAX {
+            1
+        } else {
+            self.next + 1
+        };
+        pid
+    }
+
+    fn free(&mut self, pid: Pid) {
+        if pid > 0 {
+            self.recycled.push_back(pid);
+        }
+    }
+}
+
+static PID_ALLOCATOR: Mutex<PidAllocator> = Mutex::new(PidAllocator::new());
 
 /// Allocate a new PID
 pub fn allocate_pid() -> Pid {
-    let mut next = NEXT_PID.lock();
-    let pid = *next;
-    *next += 1;
-    pid
+    PID_ALLOCATOR.lock().allocate()
 }
 
-/// Free a PID
-pub fn free_pid(_pid: Pid) {
-    // TODO: Implement PID recycling
+/// Free a PID back to the pool for reuse
+pub fn free_pid(pid: Pid) {
+    PID_ALLOCATOR.lock().free(pid);
 }
 
 #[cfg(test)]
@@ -53,8 +90,18 @@ mod tests {
     }
 
     #[test]
+    fn test_free_pid_recycled() {
+        // Allocate a PID, free it, then allocate again - should get recycled PID
+        let mut allocator = PidAllocator::new();
+        let pid1 = allocator.allocate();
+        allocator.free(pid1);
+        let pid2 = allocator.allocate();
+        assert_eq!(pid1, pid2, "Freed PID should be recycled");
+    }
+
+    #[test]
     fn test_free_pid_no_panic() {
-        // free_pid should not panic (even though it's a stub)
+        // free_pid should not panic
         let pid = allocate_pid();
         free_pid(pid);
     }
