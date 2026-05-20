@@ -7,7 +7,7 @@ license = "MIT"
 
 [dependencies]
 bitflags = "2.4"
-spin = "0.9"
+spin = "0.12"
 rinux-kernel = { path = "../../kernel" }
 
 [lib]
