@@ -6,7 +6,7 @@ authors = ["Rinux Contributors"]
 license = "MIT"
 
 [dependencies]
-spin = "0.9"
+spin = "0.12"
 rinux-kernel = { path = "../kernel" }
 rinux-arch-x86 = { path = "../arch/x86" }
 rinux-mm = { path = "../mm" }
